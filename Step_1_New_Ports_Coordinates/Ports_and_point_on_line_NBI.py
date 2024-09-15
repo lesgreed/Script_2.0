@@ -25,6 +25,7 @@ def find_new_P2():
     dy = (P_2[1] - P_1[1])/100
     dz = (P_2[2] - P_1[2])/100
     for i in range(len(P_1[1])):
+     print(i)
      x_1, y_1, z_1 = StL.point(R_x_all, R_y_all, Z_all, Phi, R_phi, Z_phi , P_1[0][i], P_1[1][i],P_1[2][i],dx[i],dz[i] ,dy[i]) 
      x_1 = x_1 + dx[i]/(np.sqrt(dx[i]**2 + dy[i]**2 + dz[i]**2))*2
      y_1 = y_1 + dy[i]/(np.sqrt(dx[i]**2 + dy[i]**2 + dz[i]**2))*2
