@@ -91,8 +91,8 @@ if __name__ == "__main__":
     intersection_P_1 = [intersection_points_array[:, 0], intersection_points_array[:, 1], intersection_points_array[:, 2]]
 
     # Add all the lines to the plotter
-    #for line in lines:
-    #    plotter.add_mesh(line, color='yellow', line_width=3)
+    for line in lines:
+     plotter.add_mesh(line, color='yellow', line_width=3)
 
     # Show the plot with surface and lines
     plotter.show()

@@ -4,7 +4,13 @@ import os
 os.chdir('J_0_test')
 print("Current working directory:", os.getcwd())
             
-    
+try:
+    mconf = np.ctypeslib.load_library('mconf_matlab', loader_path='.')
+    print("DLL loaded successfully.")
+except Exception as e:
+    print(f"Error loading DLL: {e}")
+
+
 mconf_config = {'B0': 2.525,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation

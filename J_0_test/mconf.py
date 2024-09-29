@@ -23,7 +23,7 @@ class Mconf_equilibrium:
     def __init__(self, equilibrium_name, mconf_config=None):
         
         if platform.system()=='Windows':
-            libname="mconf_matlab64.dll"
+            libname='mconf_matlab64.dll'
         elif platform.system()=='Linux':
             libname = os.path.join(os.path.dirname(__file__),"unix/mconf_matlab64.so")
         elif platform.system()=='Darwin':
