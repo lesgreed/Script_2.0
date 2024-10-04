@@ -110,13 +110,13 @@ def NBI_and_PORTS(NBI_index, lines2, new_P_1,new_NBI_start, new_NBI_end, surface
     #add_points_to_plotter(plotter, extreme_points_1, color='red', point_size=15)
     #add_points_to_plotter(plotter, extreme_points_2, color='blue', point_size=15)
     for line in valid_lines:
-        plotter.add_mesh(line, color='green', line_width=3)
+        plotter.add_mesh(line, color='green', line_width=1)
     # Get the port names for valid indices
     valid_port_names = [P_name[i] for i in valid_indices]
     add_labels(plotter, new_P_1[:, valid_indices], valid_port_names)
     #add_labels(plotter, new_P_1, P_name)
 
-    return plotter
+    return plotter, valid_indices
 
 if __name__ == "__main__":
     start_time = time.time()
@@ -156,8 +156,9 @@ if __name__ == "__main__":
      # Add NBI and ports to plot
     find_good_ports_start_time = time.time() 
     NBI_index = 1
-    plotter = NBI_and_PORTS(NBI_index, lines2, new_P_1,new_NBI_start, new_NBI_end, surface, plotter, P_name)
+    plotter, valid_indices = NBI_and_PORTS(NBI_index, lines2, new_P_1,new_NBI_start, new_NBI_end, surface, plotter, P_name)
     find_good_ports_end_time = time.time()  
+    print(valid_indices)
     print(f"Valid ports processing {find_good_ports_end_time - find_good_ports_start_time:.2f} seconds")
 
 
