@@ -16,14 +16,14 @@ def create_surface(R_x, R_y, R_z):
             faces.append([4, len(points)-4, len(points)-3, len(points)-2, len(points)-1])
     return pv.PolyData(np.array(points), faces=np.hstack(faces))
 
-def find_intersection(surface, point, direction):
-    ray_end = point + direction / np.linalg.norm(direction) * 1000
-    return surface.ray_trace(point, ray_end)[0][0]
-
 def find_first_two_intersections(surface, point, direction):
     ray_end = point + direction / np.linalg.norm(direction) * 1000
     intersections = surface.ray_trace(point, ray_end)[0]
-    return intersections[0], intersections[1]  
+    return intersections[:2]  
+
+def find_intersection(surface, point, direction):
+    ray_end = point + direction / np.linalg.norm(direction) * 1000
+    return surface.ray_trace(point, ray_end)[0][0]
 
 def get_intersection_points_NBI(NBI_X, NBI_Y, NBI_Z, NBI_uvec_X, NBI_uvec_Y, NBI_uvec_Z, surface):
     new_NBI_start, new_NBI_end, lines = [], [], []
@@ -39,23 +39,23 @@ def get_intersection_points_NBI(NBI_X, NBI_Y, NBI_Z, NBI_uvec_X, NBI_uvec_Y, NBI
 
     return np.array(new_NBI_start).T, np.array(new_NBI_end).T, lines
 
-def get_intersection_points(P_1,P_2, surface):
+def get_intersection_points(P_1, P_2, surface):
     new_P_1, lines = [], []
     for i in range(P_1.shape[1]):
         start_point = P_1[:, i]
         direction_vector = P_2[:, i] - start_point
         intersection = find_intersection(surface, start_point, direction_vector)
         new_P_1.append(intersection) 
-        lines.append(pv.Line(start_point, intersection))
-    return np.array(new_P_1).T, lines
+        line = pv.Line(start_point, intersection)
+        lines.append(line)
+    new_P_1 = np.array(new_P_1).T
+    return new_P_1, lines
 
 def check_intersection(point, candidate_point, surface):
     intersection_points = surface.ray_trace(point, candidate_point)[0]
     if len(intersection_points) > 0 and np.linalg.norm(intersection_points[0] - point) < 1e-3:
-        return intersection_points[1:]  # Возвращаем все точки, кроме первой
-    else:
-     return intersection_points  # Возвращаем все точки пересечения, если первая не совпадает
-
+        return intersection_points[1:]  
+    return intersection_points
 
 def find_max_valid_range(new_P_1, NBI_start, NBI_end, surface):
     mid_point = (NBI_start + NBI_end) / 2
@@ -80,14 +80,9 @@ def find_max_valid_range(new_P_1, NBI_start, NBI_end, surface):
             max_end = find_extreme_points(point, direction_to_end, mid_point, NBI_end)
             extreme_points_1.append(max_start)
             extreme_points_2.append(max_end)
-            valid_lines.extend([pv.Line(point, max_start), pv.Line(point, max_end)])
+            valid_lines.extend([pv.Line(point, mid_point), pv.Line(point, max_start), pv.Line(point, max_end)])
 
     return valid_indices, extreme_points_1, extreme_points_2, valid_lines
-
-def add_points_to_plotter(plotter, points, color='blue', point_size=10):
-    points = np.array(points)
-    point_cloud = pv.PolyData(points)
-    plotter.add_mesh(point_cloud, color=color, point_size=point_size, render_points_as_spheres=True)
 
 def add_valid_points_to_plotter(plotter, points, indices, color='blue', point_size=10):
     valid_points = points[:, indices].T
@@ -96,86 +91,44 @@ def add_valid_points_to_plotter(plotter, points, indices, color='blue', point_si
 def add_labels(plotter, points, labels, text_color='white', point_color='blue'):
     plotter.add_point_labels(pv.PolyData(points.T), labels, point_size=10, font_size=12, text_color=text_color, point_color=point_color)
 
-
-def NBI_and_PORTS(NBI_index, lines2, new_P_1,new_NBI_start, new_NBI_end, surface, plotter, P_name ):
-    plotter.add_mesh(lines2[NBI_index], color='red', line_width=3) 
+def NBI_and_PORTS(NBI_index, lines2, new_P_1, new_NBI_start, new_NBI_end, surface, plotter, P_name):
+    plotter.add_mesh(lines2[NBI_index], color='red', line_width=3)
     NBI_start, NBI_end = new_NBI_start[:, NBI_index], new_NBI_end[:, NBI_index]
     valid_indices, extreme_points_1, extreme_points_2, valid_lines = find_max_valid_range(new_P_1, NBI_start, NBI_end, surface)
+
     add_valid_points_to_plotter(plotter, new_P_1, valid_indices, color='red', point_size=12)
-    NBI_labels = [f"NBI {i}" for i in range(new_NBI_start.shape[1])]  
-    add_labels(plotter, new_NBI_start, NBI_labels)
+    NBI_labels = [f"NBI {i}" for i in range(new_NBI_start.shape[1])]
+    add_labels(plotter, new_NBI_start, NBI_labels, text_color='white', point_color='red')
+    # Uncomment to add port labels if needed
+    # valid_port_names = [P_name[i] for i in valid_indices]
+    # add_labels(plotter, new_P_1[:, valid_indices], valid_port_names)
 
-
-    #add_points_to_plotter(plotter, new_P_1.T, color='yellow', point_size=12)
-    #add_points_to_plotter(plotter, extreme_points_1, color='red', point_size=15)
-    #add_points_to_plotter(plotter, extreme_points_2, color='blue', point_size=15)
-    for line in valid_lines:
-        plotter.add_mesh(line, color='green', line_width=3)
-    # Get the port names for valid indices
-    valid_port_names = [P_name[i] for i in valid_indices]
-    add_labels(plotter, new_P_1[:, valid_indices], valid_port_names)
-    #add_labels(plotter, new_P_1, P_name)
-
-    return plotter
+    print(f"New points for ports were found")
 
 if __name__ == "__main__":
     start_time = time.time()
+
     # Load data
     R_x, R_y, R_z = FuD.all_point(FuD.read_data()[0])
     P_1, P_2, P_name = Cout.Ports()
     NBI_X, NBI_Y, NBI_Z, NBI_uvec_X, NBI_uvec_Y, NBI_uvec_Z = Cout.NBI()
-    
-    # Create 3D surface
-    surface_start_time = time.time()  
-    surface = create_surface(R_x, R_y, R_z)
-    surface_end_time = time.time()  
-    print(f"Surface creation took {surface_end_time - surface_start_time:.2f} seconds")
 
+    # Create surface
+    surface = create_surface(R_x, R_y, R_z)
+    
     # Initialize plotter and add surface
     plotter = pv.Plotter()
     plotter.add_mesh(surface, color='cyan', show_edges=True, opacity=0.2)
     
-    #Get intersections for ports and NBI
-    new_P_2_time_start = time.time()  
-    new_P_1, lines1 = get_intersection_points(P_1,P_2, surface)
-    new_P_2_time_end = time.time()  
-    print(f"Ports processing took {new_P_2_time_end - new_P_2_time_start:.2f} seconds")
-
-    #get new start and end NBI
-    NBI_start_time = time.time()  
+    # Get intersections for ports and NBI
+    new_P_1, lines1 = get_intersection_points(P_1, P_2, surface)
     new_NBI_start, new_NBI_end, lines2 = get_intersection_points_NBI(NBI_X, NBI_Y, NBI_Z, NBI_uvec_X, NBI_uvec_Y, NBI_uvec_Z, surface)
-    NBI_end_time = time.time()  
-    print(f"NBI processing took {NBI_end_time - NBI_start_time:.2f} seconds")
 
-    #for line in lines1:
-    #    plotter.add_mesh(line, color='yellow', line_width=3)
-
-    #for line in lines2:
-    #    plotter.add_mesh(line, color='red', line_width=3)
-
-     # Add NBI and ports to plot
-    find_good_ports_start_time = time.time() 
+    # Add NBI and ports to plot
     NBI_index = 1
-    plotter = NBI_and_PORTS(NBI_index, lines2, new_P_1,new_NBI_start, new_NBI_end, surface, plotter, P_name)
-    find_good_ports_end_time = time.time()  
-    print(f"Valid ports processing {find_good_ports_end_time - find_good_ports_start_time:.2f} seconds")
-
-
+    NBI_and_PORTS(NBI_index, lines2, new_P_1, new_NBI_start, new_NBI_end, surface, plotter, P_name)
+    
+    plotter.show()
 
     total_time = time.time() - start_time
     print(f"Total execution time: {total_time:.2f} seconds")
-
-    plotter.show()
-    
-    
-
-    
-
-
-
-
-
-
-
-
-

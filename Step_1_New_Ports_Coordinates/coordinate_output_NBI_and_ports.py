@@ -67,43 +67,27 @@ def Ports():
         P_2 = [P_2_X, P_2_Y, P_2_Z]
         P_2 = np.array(P_2)
 
-    
-    # P_3
 
-        P_3_X = df.iloc[2:, 10].tolist() #4 row 11 colum 
-        P_3_Y = df.iloc[2:, 11].tolist() #4 row 12 colum 
-        P_3_Z = df.iloc[2:, 12].tolist() #4 row 13 colum
-        
-        P_3_X = [float(value) for value in P_3_X]
-        P_3_Y = [float(value) for value in P_3_Y]
-        P_3_Z = [float(value) for value in P_3_Z]
-        
 
-        
-        
-        P_3 = [P_3_X, P_3_Y, P_3_Z]
-        P_3 = np.array(P_3)
 
-    
-    # unit_vector_P_1_and_P_2
+    #ports_name
+        P_name = df.iloc[2:, 1].tolist()  
+        P_module = df.iloc[2:, 2].tolist()  
+        P_submodule = df.iloc[2:, 3].tolist()  
 
-        P_u_X = df.iloc[2:, 13].tolist() #4 row 14 colum 
-        P_u_Y = df.iloc[2:, 14].tolist() #4 row 15 colum 
-        P_u_Z = df.iloc[2:, 15].tolist() #4 row 16 colum
-        
-        P_u_X = [float(value) for value in P_u_X]
-        P_u_Y = [float(value) for value in P_u_Y]
-        P_u_Z = [float(value) for value in P_u_Z]
-        
+        P_name = np.array(P_name)
+        P_module = [int(value) for value in P_module]
 
-        
-        
-        P_u = [P_u_X, P_u_Y, P_u_Z]
-        P_unit_vector = np.array(P_u)
+        # Remove the first character from each port name
+        modified_P_name = [name[2:] for name in P_name]  # Keep only the characters after the first one
 
-        return P_1, P_2, P_3, P_unit_vector
-    
-    
+        # Convert P_submodule to the desired format
+        modified_P_submodule = [1 if submodule == 0 else 0 for submodule in P_submodule]
 
-    
+        # Create the new array with the desired format
+        combined_array = [f"{module}_{submodule}_{name}" for module, submodule, name in zip(P_module, modified_P_submodule, modified_P_name)]
+
+
+        return P_1, P_2, combined_array
+
 
