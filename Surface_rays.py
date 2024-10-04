@@ -1,7 +1,7 @@
 import pyvista as pv
 import numpy as np
-import Tools.Function_for_DATA_angel as FuD
-import coordinate_output_NBI_and_ports as Cout
+import Surface_data as FuD
+import NBI_Ports_data_input as Cout
 import time
 
 def create_surface(R_x, R_y, R_z):
@@ -97,10 +97,17 @@ def add_labels(plotter, points, labels, text_color='white', point_color='blue'):
     plotter.add_point_labels(pv.PolyData(points.T), labels, point_size=10, font_size=12, text_color=text_color, point_color=point_color)
 
 
-def NBI_and_PORTS(NBI_index, lines2, new_P_1,new_NBI_start, new_NBI_end, surface, plotter, P_name ):
-    plotter.add_mesh(lines2[NBI_index], color='red', line_width=3) 
+def NBI_and_PORTS(NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface):
     NBI_start, NBI_end = new_NBI_start[:, NBI_index], new_NBI_end[:, NBI_index]
     valid_indices, extreme_points_1, extreme_points_2, valid_lines = find_max_valid_range(new_P_1, NBI_start, NBI_end, surface)
+    return valid_indices, extreme_points_1, extreme_points_2, valid_lines
+
+
+def visualisation(surface,lines1, lines2,NBI_index,new_P_1,valid_indices, new_NBI_start,extreme_points_1,extreme_points_2, valid_lines, P_name):
+    # Initialize plotter and add surface
+    plotter = pv.Plotter()
+    plotter.add_mesh(surface, color='cyan', show_edges=True, opacity=0.2)
+    plotter.add_mesh(lines2[NBI_index], color='red', line_width=3) 
     add_valid_points_to_plotter(plotter, new_P_1, valid_indices, color='red', point_size=12)
     NBI_labels = [f"NBI {i}" for i in range(new_NBI_start.shape[1])]  
     add_labels(plotter, new_NBI_start, NBI_labels)
@@ -116,7 +123,14 @@ def NBI_and_PORTS(NBI_index, lines2, new_P_1,new_NBI_start, new_NBI_end, surface
     add_labels(plotter, new_P_1[:, valid_indices], valid_port_names)
     #add_labels(plotter, new_P_1, P_name)
 
-    return plotter, valid_indices
+
+    #for line in lines1:
+    #    plotter.add_mesh(line, color='yellow', line_width=3)
+
+    #for line in lines2:
+    #    plotter.add_mesh(line, color='red', line_width=3)
+    plotter.show()
+
 
 if __name__ == "__main__":
     start_time = time.time()
@@ -131,10 +145,7 @@ if __name__ == "__main__":
     surface_end_time = time.time()  
     print(f"Surface creation took {surface_end_time - surface_start_time:.2f} seconds")
 
-    # Initialize plotter and add surface
-    plotter = pv.Plotter()
-    plotter.add_mesh(surface, color='cyan', show_edges=True, opacity=0.2)
-    
+
     #Get intersections for ports and NBI
     new_P_2_time_start = time.time()  
     new_P_1, lines1 = get_intersection_points(P_1,P_2, surface)
@@ -147,27 +158,20 @@ if __name__ == "__main__":
     NBI_end_time = time.time()  
     print(f"NBI processing took {NBI_end_time - NBI_start_time:.2f} seconds")
 
-    #for line in lines1:
-    #    plotter.add_mesh(line, color='yellow', line_width=3)
-
-    #for line in lines2:
-    #    plotter.add_mesh(line, color='red', line_width=3)
-
      # Add NBI and ports to plot
     find_good_ports_start_time = time.time() 
     NBI_index = 1
-    plotter, valid_indices = NBI_and_PORTS(NBI_index, lines2, new_P_1,new_NBI_start, new_NBI_end, surface, plotter, P_name)
+    valid_indices, extreme_points_1, extreme_points_2, valid_lines = NBI_and_PORTS(NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface)
     find_good_ports_end_time = time.time()  
     print(valid_indices)
     print(f"Valid ports processing {find_good_ports_end_time - find_good_ports_start_time:.2f} seconds")
-
+    
 
 
     total_time = time.time() - start_time
     print(f"Total execution time: {total_time:.2f} seconds")
+    visualisation(surface,lines1, lines2,NBI_index,new_P_1,valid_indices, new_NBI_start,extreme_points_1,extreme_points_2, valid_lines, P_name)
 
-    plotter.show()
-    
     
 
     

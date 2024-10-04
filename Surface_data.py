@@ -1,11 +1,9 @@
 import numpy as np
 import os
 
-
-#Read_data_in_file "/FIDA/Geometry/Input_data/data.txt" 
 def read_data():
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(current_dir, 'data.txt')
+    filename = os.path.join(current_dir, 'Input_data/data.txt')
     Phi, R_phi, Z_phi = [], [], []
     current_block_R, current_block_Z = [], []
 
