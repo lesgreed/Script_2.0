@@ -57,11 +57,7 @@ def check_intersection(point, candidate_point, surface):
      return intersection_points  # Возвращаем все точки пересечения, если первая не совпадает
 
 
-def find_max_valid_range(new_P_1, NBI_start, NBI_end, surface):
-    mid_point = (NBI_start + NBI_end) / 2
-    valid_indices, extreme_points_1, extreme_points_2, valid_lines = [], [], [], []
-
-    def find_extreme_points(point, direction, mid_point, NBI_limit):
+def find_extreme_points(point, direction, mid_point, NBI_limit, surface):
         max_valid_point = mid_point
         step_vector = direction / np.linalg.norm(direction)
         for t in np.linspace(0, 1, 100):
@@ -71,18 +67,30 @@ def find_max_valid_range(new_P_1, NBI_start, NBI_end, surface):
             max_valid_point = candidate_point
         return max_valid_point
 
+def find_max_valid_range(new_P_1, NBI_start, NBI_end, surface):
+    mid_point = (NBI_start + NBI_end) / 2
+    valid_indices, extreme_points_1, extreme_points_2, valid_lines = [], [], [], []
     for i, point in enumerate(new_P_1.T):
         if len(check_intersection(point, mid_point, surface)) == 0:
             valid_indices.append(i)
             direction_to_start = NBI_start - mid_point
             direction_to_end = NBI_end - mid_point
-            max_start = find_extreme_points(point, direction_to_start, mid_point, NBI_start)
-            max_end = find_extreme_points(point, direction_to_end, mid_point, NBI_end)
+            max_start = find_extreme_points(point, direction_to_start, mid_point, NBI_start, surface)
+            max_end = find_extreme_points(point, direction_to_end, mid_point, NBI_end, surface)
             extreme_points_1.append(max_start)
             extreme_points_2.append(max_end)
             valid_lines.extend([pv.Line(point, max_start), pv.Line(point, max_end)])
 
     return valid_indices, extreme_points_1, extreme_points_2, valid_lines
+
+def pre_find_max_valid_range(new_P_1, NBI_start, NBI_end, surface):
+    mid_point = (NBI_start + NBI_end) / 2
+    valid_indices = []
+    for i, point in enumerate(new_P_1.T):
+        if len(check_intersection(point, mid_point, surface)) == 0:
+            valid_indices.append(i)
+    return valid_indices
+
 
 def add_points_to_plotter(plotter, points, color='blue', point_size=10):
     points = np.array(points)
@@ -102,6 +110,10 @@ def NBI_and_PORTS(NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface):
     valid_indices, extreme_points_1, extreme_points_2, valid_lines = find_max_valid_range(new_P_1, NBI_start, NBI_end, surface)
     return valid_indices, extreme_points_1, extreme_points_2, valid_lines
 
+def pre_NBI_and_PORTS(NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface):
+    NBI_start, NBI_end = new_NBI_start[:, NBI_index], new_NBI_end[:, NBI_index]
+    valid_indices = pre_find_max_valid_range(new_P_1, NBI_start, NBI_end, surface)
+    return valid_indices
 
 def visualisation(surface,lines1, lines2,NBI_index,new_P_1,valid_indices, new_NBI_start,extreme_points_1,extreme_points_2, valid_lines, P_name):
     # Initialize plotter and add surface
@@ -125,7 +137,7 @@ def visualisation(surface,lines1, lines2,NBI_index,new_P_1,valid_indices, new_NB
 
 
     #for line in lines1:
-    #    plotter.add_mesh(line, color='yellow', line_width=3)
+     #   plotter.add_mesh(line, color='yellow', line_width=3)
 
     #for line in lines2:
     #    plotter.add_mesh(line, color='red', line_width=3)
