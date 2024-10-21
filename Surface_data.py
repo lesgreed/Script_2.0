@@ -95,6 +95,6 @@ def all_point(Phi):
       R_y_all.append(R_y_list)
       Z_all.append(Z_list)
      
-      target_angle += 0.5
+      target_angle += 1
       
     return R_x_all, R_y_all, Z_all

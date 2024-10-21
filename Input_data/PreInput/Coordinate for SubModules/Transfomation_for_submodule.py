@@ -171,7 +171,7 @@ def new_coordinates_for_SUBModuls(row_number, output_sheet, module_value, submod
     Z_Zero = 0
     
     
-    R_two = 1000000000000000000000000000000000000000000000000000000
+    R_two = 1
     Phi_two = 36 + 72 * (module_value-1)
     Z_two = 0
     
@@ -222,13 +222,16 @@ def new_coordinates_for_SUBModuls(row_number, output_sheet, module_value, submod
 
 
 if __name__ == "__main__":
+ os.chdir('Input_data\PreInput\Coordinates for modules')
+ print("Current working directory:", os.getcwd())
+        
  file_to_delete = 'Result_Tranformation_for_submodule.xlsx'
  input_file_path = 'Result_Tranformation_for_module.xlsx'
- output_file_path = 'Result_Tranformation_for_submodule.xlsx'
+ output_file_path = 'Result_Tranformation_for_submodule2.xlsx'
  
 
 
- delete(file_to_delete)    
+ #delete(file_to_delete)    
   
  
  output_sheet, output_workbook = create_new_file(input_file_path, output_file_path)

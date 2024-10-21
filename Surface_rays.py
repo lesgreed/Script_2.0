@@ -52,11 +52,10 @@ def get_intersection_points(P_1,P_2, surface):
 def check_intersection(point, candidate_point, surface):
     intersection_points = surface.ray_trace(point, candidate_point)[0]
     if len(intersection_points) > 0 and np.linalg.norm(intersection_points[0] - point) < 1e-3:
-        return intersection_points[1:]  # Возвращаем все точки, кроме первой
+        return intersection_points[1:]  
     else:
-     return intersection_points  # Возвращаем все точки пересечения, если первая не совпадает
-
-
+     return intersection_points  
+    
 def find_extreme_points(point, direction, mid_point, NBI_limit, surface):
         max_valid_point = mid_point
         step_vector = direction / np.linalg.norm(direction)

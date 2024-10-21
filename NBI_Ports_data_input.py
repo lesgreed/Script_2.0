@@ -82,7 +82,7 @@ def Ports():
         modified_P_name = [name[2:] for name in P_name]  # Keep only the characters after the first one
 
         # Convert P_submodule to the desired format
-        modified_P_submodule = [1 if submodule == 0 else 0 for submodule in P_submodule]
+        modified_P_submodule = [0 if submodule == 0 else 1 for submodule in P_submodule]
 
         # Create the new array with the desired format
         combined_array = [f"{module}_{submodule}_{name}" for module, submodule, name in zip(P_module, modified_P_submodule, modified_P_name)]

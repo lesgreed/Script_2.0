@@ -7,15 +7,18 @@ import numpy as np
 import Surface_rays as geo
 import Surface_data as FuD
 import NBI_Ports_data_input as Cout
+import J_0_test.mconf.mconf as mconf
+import os 
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         # configure window
-        self.title("Ivan")
+        self.title("W7-X cheking")
         self.geometry(f"{1520}x{900}")
         self.data_instance = Data()
+        self.Bget = calculus()
 
         # Global variable for slider value
         self.angle = 90
@@ -46,7 +49,7 @@ class App(ctk.CTk):
         self.sidebar_frame = ctk.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(2, weight=1)
-        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="FIDA", font=ctk.CTkFont(size=20, weight="bold"))
+        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="W7-X cheking", font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
         
@@ -54,21 +57,41 @@ class App(ctk.CTk):
         self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
+        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 0))
         self.scaling_label = ctk.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
         self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
         self.scaling_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
                                                                command=self.change_scaling_event)
         self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
+
+
+
+        self.show_old_button_label= ctk.CTkLabel(self.sidebar_frame, text="Raw data:", anchor="w")    
+        self.show_old_button_label.grid(row=4, column=0, padx=10, pady=(10,0))   
+        self.show_old_button = ctk.CTkButton(self.sidebar_frame, text="Update data", command=lambda: self.pre_calculate())
+        self.show_old_button.grid(row=4, column=0, padx=10, pady=(70,0))
+    
+
+    def pre_calculate(self):
+        if len(self.all_results) ==0:
+         Result_array = self.data_instance.data_already_input()  
+         self.all_results = Result_array
+        else:
+            self.all_results = self.all_results[:2]
+        print(len(self.all_results[1][2]))
+
+        time = datetime.now().strftime("%H:%M:%S")
+        self.textbox.insert("end", f"\n\n [{time}]: Old data ready \n\n ")
         
     def create_additional_widgets(self):
         # create textbox
-        self.textbox = ctk.CTkTextbox(self, width=30)  # уменьшенная ширина
+        self.textbox = ctk.CTkTextbox(self, width=30)  
         self.textbox.grid(row=0, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
 
         # Button to show graph
         self.show_graph_button = ctk.CTkButton(self, text="Add Port", command=lambda: self.dummy_function())
         self.show_graph_button.grid(row=1, column=1, padx=(20, 0), pady=(10, 0), sticky="w")
+
 
         # create tabview with two sections
         self.tabview = ctk.CTkTabview(self, width=250)
@@ -197,6 +220,8 @@ class Data:
         self.R_x, self.R_y, self.R_z = FuD.all_point(FuD.read_data()[0])
         self.P_1, self.P_2, self.P_name = Cout.Ports()
         self.NBI_X, self.NBI_Y, self.NBI_Z, self.NBI_uvec_X, self.NBI_uvec_Y, self.NBI_uvec_Z = Cout.NBI()
+        self.Bget = calculus()
+
 
         # Create 3D surface
         self.surface = geo.create_surface(self.R_x, self.R_y, self.R_z)
@@ -218,11 +243,52 @@ class Data:
             NBI_index, P_1_for_NBI, self.new_NBI_start, self.new_NBI_end, self.surface)
         valid_port_names = [self.P_name[i] for i in valid_indices]
         print(angle)
+        self.data_already_input()
         return valid_indices, extreme_points_1, extreme_points_2, valid_port_names
 
+    def data_already_input(self):
+        Name_Ports = ['2_1_AEA', '2_1_AEM','2_1_AET'] 
+        Name_NBI = ['NBI_7', 'NBI_8' ]
+        Port_indices = [self.P_name.index(port) for port in Name_Ports if port in self.P_name]
+        NBI_indices = [6,7]
+        data = [[],[]]
+        for i in range(len(NBI_indices)):
+            NBI_index_i = NBI_indices[i]
+            P_1_for_NBI_i = self.new_P_1[:, Port_indices]
+            valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
+            NBI_index_i, P_1_for_NBI_i, self.new_NBI_start, self.new_NBI_end, self.surface)
+            data[i] = [Port_indices, np.array(extreme_points_1, dtype=np.float64), np.array(extreme_points_2, dtype=np.float64)]
 
+
+
+        self.Bget.gets(data[0][1][1], data[0][2][1], 3)
+
+        return data
+    
+
+class calculus():
+    def __init__(self):
+        pass
+
+
+
+
+    def gets(self, point1, point2, scale):
+      points = np.linspace(point1/100, point2/100, scale)
+      os.chdir('J_0_test')
+      mconf_config = {'B0': 2.525,
+                'B0_angle': 0.0,
+                'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
+                'truncation': 1e-10} #trancation of mn harmonics
+      eq = mconf.Mconf_equilibrium('w7x-sc1.bc',mconf_config=mconf_config)
+      for i in range(len(points)):
+         B, vecB = eq.get_B(points[i])
+         valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
+         print(valueB)
+      print(points)
+
+        
 
 if __name__ == "__main__":
-    
     app = App()
     app.mainloop()
