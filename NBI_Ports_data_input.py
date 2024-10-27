@@ -36,7 +36,7 @@ def NBI():
 
 def Ports():
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(current_dir, 'Input_data', 'Ports_coordinates.xlsx')
+        file_path = os.path.join(current_dir, 'PortsDATA_ver2.xlsx')
         df = pd.read_excel(file_path)
     # P_1
 

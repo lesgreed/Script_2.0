@@ -21,7 +21,7 @@ class App(ctk.CTk):
         self.Bget = calculus()
 
         # Global variable for slider value
-        self.angle = 90
+        self.angle = int(90)
         self.scale = 10  # New global variable for the second slider
 
         # Section 1: Sidebar
@@ -163,7 +163,7 @@ class App(ctk.CTk):
          nbi_index = nbi_index+8
         
         nbi_index = nbi_index-1
-        valid_indices, extreme_points_1, extreme_points_2, valid_port_names = self.data_instance.port_for_nbi(nbi_index, self.angle, self.scale)
+        valid_indices, extreme_points_1, extreme_points_2, valid_port_names = self.data_instance.port_for_nbi(nbi_index, int(self.angle), self.scale)
         Ports_for_NBI_Index = valid_port_names
         return Ports_for_NBI_Index 
 
@@ -239,11 +239,13 @@ class Data:
 
     def port_for_nbi(self, NBI_index, angle, scale):
         P_1_for_NBI = self.new_P_1[:, self.valid_indx[NBI_index]]
-        valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
-            NBI_index, P_1_for_NBI, self.new_NBI_start, self.new_NBI_end, self.surface)
-        valid_port_names = [self.P_name[i] for i in valid_indices]
+        P_1_start_for_NBI = self.P_1[:, self.valid_indx[NBI_index]]
+        Pname_for_NBI = [self.P_name[i] for i in self.valid_indx[NBI_index]]
         print(angle)
-        self.data_already_input()
+        valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
+            P_1_start_for_NBI, NBI_index, P_1_for_NBI, self.new_NBI_start, self.new_NBI_end, self.surface, float(angle))
+        valid_port_names = [Pname_for_NBI[i] for i in valid_indices]
+        print(valid_port_names)
         return valid_indices, extreme_points_1, extreme_points_2, valid_port_names
 
     def data_already_input(self):
@@ -255,8 +257,9 @@ class Data:
         for i in range(len(NBI_indices)):
             NBI_index_i = NBI_indices[i]
             P_1_for_NBI_i = self.new_P_1[:, Port_indices]
+            P_1_start_for_NBI = self.P_1[:, Port_indices]
             valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
-            NBI_index_i, P_1_for_NBI_i, self.new_NBI_start, self.new_NBI_end, self.surface)
+            P_1_start_for_NBI, NBI_index_i, P_1_for_NBI_i, self.new_NBI_start, self.new_NBI_end, self.surface, float(90))
             data[i] = [Port_indices, np.array(extreme_points_1, dtype=np.float64), np.array(extreme_points_2, dtype=np.float64)]
 
 

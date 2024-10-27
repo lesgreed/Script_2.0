@@ -56,26 +56,55 @@ def check_intersection(point, candidate_point, surface):
     else:
      return intersection_points  
     
-def find_extreme_points(point, direction, mid_point, NBI_limit, surface):
+def find_extreme_points(point_1, point, direction, mid_point, NBI_limit, surface, angle):
         max_valid_point = mid_point
         step_vector = direction / np.linalg.norm(direction)
         for t in np.linspace(0, 1, 100):
             candidate_point = mid_point + t * step_vector * np.linalg.norm(direction)
-            if len(check_intersection(point, candidate_point, surface)) > 0:
+            if len(check_intersection(point, candidate_point, surface)) > 0 or check_segment_angle(point_1, point, candidate_point)>angle:
                 break
             max_valid_point = candidate_point
         return max_valid_point
+import numpy as np
 
-def find_max_valid_range(new_P_1, NBI_start, NBI_end, surface):
+def check_segment_angle(point_1, point_2, point_checked):
+
+    vector_AB = np.array(point_2) - np.array(point_1)  
+    vector_CD = np.array(point_checked) - np.array(point_2)  
+    
+    dot_product = np.dot(vector_AB, vector_CD)
+    
+
+    magnitude_AB = np.linalg.norm(vector_AB)
+    magnitude_CD = np.linalg.norm(vector_CD)
+    
+
+    if magnitude_AB == 0 or magnitude_CD == 0: 
+        return None 
+
+    cos_theta = dot_product / (magnitude_AB * magnitude_CD)
+    
+    cos_theta = np.clip(cos_theta, -1.0, 1.0)
+    
+    angle_rad = np.arccos(cos_theta)
+    
+    angle_deg = np.degrees(angle_rad)
+    print(angle_deg)
+    return angle_deg
+
+
+
+def find_max_valid_range(P_1, new_P_1, NBI_start, NBI_end, surface, angle):
     mid_point = (NBI_start + NBI_end) / 2
     valid_indices, extreme_points_1, extreme_points_2, valid_lines = [], [], [], []
     for i, point in enumerate(new_P_1.T):
-        if len(check_intersection(point, mid_point, surface)) == 0:
+        point_1 = [P_1[0][i],P_1[1][i], P_1[2][i]]
+        if len(check_intersection(point, mid_point, surface)) == 0 and float(check_segment_angle(point_1, point, mid_point))<=angle:
             valid_indices.append(i)
             direction_to_start = NBI_start - mid_point
             direction_to_end = NBI_end - mid_point
-            max_start = find_extreme_points(point, direction_to_start, mid_point, NBI_start, surface)
-            max_end = find_extreme_points(point, direction_to_end, mid_point, NBI_end, surface)
+            max_start = find_extreme_points(point_1, point, direction_to_start, mid_point, NBI_start, surface, angle)
+            max_end = find_extreme_points(point_1, point, direction_to_end, mid_point, NBI_end, surface, angle)
             extreme_points_1.append(max_start)
             extreme_points_2.append(max_end)
             valid_lines.extend([pv.Line(point, max_start), pv.Line(point, max_end)])
@@ -104,9 +133,9 @@ def add_labels(plotter, points, labels, text_color='white', point_color='blue'):
     plotter.add_point_labels(pv.PolyData(points.T), labels, point_size=10, font_size=12, text_color=text_color, point_color=point_color)
 
 
-def NBI_and_PORTS(NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface):
+def NBI_and_PORTS(P_1, NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface, angle):
     NBI_start, NBI_end = new_NBI_start[:, NBI_index], new_NBI_end[:, NBI_index]
-    valid_indices, extreme_points_1, extreme_points_2, valid_lines = find_max_valid_range(new_P_1, NBI_start, NBI_end, surface)
+    valid_indices, extreme_points_1, extreme_points_2, valid_lines = find_max_valid_range(P_1, new_P_1, NBI_start, NBI_end, surface, angle)
     return valid_indices, extreme_points_1, extreme_points_2, valid_lines
 
 def pre_NBI_and_PORTS(NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface):
@@ -171,8 +200,9 @@ if __name__ == "__main__":
 
      # Add NBI and ports to plot
     find_good_ports_start_time = time.time() 
-    NBI_index = 1
-    valid_indices, extreme_points_1, extreme_points_2, valid_lines = NBI_and_PORTS(NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface)
+    NBI_index = 6
+    angle = 90
+    valid_indices, extreme_points_1, extreme_points_2, valid_lines = NBI_and_PORTS(P_1, NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface, angle)
     find_good_ports_end_time = time.time()  
     print(valid_indices)
     print(f"Valid ports processing {find_good_ports_end_time - find_good_ports_start_time:.2f} seconds")
