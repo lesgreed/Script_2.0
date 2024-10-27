@@ -89,7 +89,7 @@ def check_segment_angle(point_1, point_2, point_checked):
     angle_rad = np.arccos(cos_theta)
     
     angle_deg = np.degrees(angle_rad)
-    print(angle_deg)
+    #print(angle_deg)
     return angle_deg
 
 

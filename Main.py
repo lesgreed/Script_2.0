@@ -38,6 +38,8 @@ class App(ctk.CTk):
 
         self.current_graph = None
         self.all_results = []
+        self.Name_Ports = ['2_1_AEA', '2_1_AEA', '2_1_AEM', '2_1_AEM', '2_1_AET', '2_1_AET'] 
+        self.Name_NBI = ['NBI_7', 'NBI_8', 'NBI_7', 'NBI_8', 'NBI_7', 'NBI_8' ]
 
     def create_sidebar(self):
         # configure grid layout (4x4)
@@ -77,8 +79,7 @@ class App(ctk.CTk):
          Result_array = self.data_instance.data_already_input()  
          self.all_results = Result_array
         else:
-            self.all_results = self.all_results[:2]
-        print(len(self.all_results[1][2]))
+            self.all_results = self.all_results[:6]
 
         time = datetime.now().strftime("%H:%M:%S")
         self.textbox.insert("end", f"\n\n [{time}]: Old data ready \n\n ")
@@ -185,36 +186,147 @@ class App(ctk.CTk):
     def generate_nbi_options(self):
       return [f"NBI_{i}" if i <= 8 else f"CTS_{i-8}" for i in range(1, 12)]
 
+    def create_result_array_for_port(self, data):
+        points, B = data[0], data[1] 
+        #Arrays
+        Result_for_NBI_Port_new = []
 
+
+        
+        #for i in range(len(points[0])):
+        #    Vector1 = (NBI_seected_points[0][i]-Point_P_2[0],   NBI_seected_points[1][i]-Point_P_2[1], NBI_seected_points[2][i]-Point_P_2[2])
+        #    vector2 = (vector_B[0][i],vector_B[1][i], vector_B[2][i])
+        #    Angle_1 = angle_between_vectors(Vector1, vector2)
+        #    Angle.append(Angle_1)
+
+        #if Dia =="CTS":
+        # for i in range(len(NBI_seected_points[0])):
+        #     Vector_k_s = (NBI_seected_points[0][i]-Point_P_2[0],   NBI_seected_points[1][i]-Point_P_2[1], NBI_seected_points[2][i]-Point_P_2[2])
+        #     vector_mag = (vector_B[0][i],vector_B[1][i], vector_B[2][i])
+        #     Vector_NBI_k_i = (NBI_seected_points[0][4]-NBI_seected_points[0][0],   NBI_seected_points[1][4]-NBI_seected_points[1][0], NBI_seected_points[2][4]-NBI_seected_points[2][0])
+        #     Vector_k_delta = (Vector_k_s[0] - Vector_NBI_k_i[0],
+        #          Vector_k_s[1] - Vector_NBI_k_i[1],
+        #          Vector_k_s[2] - Vector_NBI_k_i[2])
+        #     Angle_1 = angle_between_vectors(Vector_k_delta, vector_mag)
+        #     Angle.append(Angle_1)
 
     def generate_and_show_graph(self):
-        # Example function to generate and display the graph
+        #User
+        selected_nbi = self.nbi_optionmenu.get()
+        selected_port = self.port_optionmenu.get()
+        
+        #Data
+        self.Name_NBI.append(selected_nbi)
+        self.Name_Ports.append(selected_port)
+        print(self.Name_NBI)
+        #NBI_seected_points, Point_P_2= self.data_instance.class_data(selected_nbi, selected_port)
+        #NBI_seected_points = np.array(NBI_seected_points)/100
+
+        #Result_for_NBI_Port_NEW= self.create_result_array_for_port(NBI_seected_points, Point_P_2)
+    
         # Clear previous graph
         if self.current_graph:
             self.current_graph.get_tk_widget().destroy()
 
-        # Create a simple plot
-        fig, ax = plt.subplots()
-        ax.plot([1, 2, 3], [4, 5, 6])
 
-        # Embed the figure in the canvas
+        #self.all_results.append(Result_for_NBI_Port_NEW)
+        # Draw the new graph on the canvas
+        self.draw_graph_on_canvas(self.all_results)
+
+    def dummy_function(self):
+        #User 
+        selected_nbi = self.nbi_optionmenu.get()
+        selected_port = self.port_optionmenu.get()
+        
+        #Time
+        timestamp = datetime.now().strftime("%H:%M:%S")
+          
+        #Message  
+        message = f"[{timestamp}]: Selected Port:    {selected_port}\nSelected:     {selected_nbi}\n\n"
+        self.textbox.insert("end", message)
+
+
+        self.generate_and_show_graph()
+        
+        
+    def draw_graph_on_canvas(self, Result_for_NBI_Port):
+        num_arrays = len(Result_for_NBI_Port)
+        color = np.array([])
+        Matr= np.empty((num_arrays, num_arrays), dtype=object)
+            
+        # Create a matplotlib figure
+        fig, axs = plt.subplots(num_arrays, num_arrays, figsize=(8, 8))
+
+        for i in range(num_arrays):
+            for j in range(num_arrays):
+                 MATRIX = self.suummmm(Result_for_NBI_Port[i], Result_for_NBI_Port[j])
+                 min_value = np.min(MATRIX)
+                 color = np.append(color, min_value)
+                 Matr[i, j]  = MATRIX
+        for i in range(num_arrays):
+            for j in range(num_arrays):
+
+                One_Matr = Matr[i, j] 
+                im = axs[i, j].imshow(One_Matr, cmap='Blues', origin='upper', aspect='auto', vmin=np.min(color), vmax=1.0)
+
+                axs[i, j].set_xticks([])
+                axs[i, j].set_yticks([])
+            print(i)
+
+        plt.subplots_adjust(wspace=0, hspace=0)
+        
+        
+        # Add colorbar to the last subplot
+        cax = fig.add_axes([0.93, 0.15, 0.02, 0.7])  # [x, y, width, height]
+        
+        plt.colorbar(im, cax=cax)
+
+
+        for i in range(num_arrays):
+            if num_arrays>=11:
+                fonts = 6
+            else:
+                fonts = 9
+
+            selected_nbi = self.Name_NBI[i]
+            selected_port = self.Name_Ports[i]
+            if selected_nbi[0] == 'N':
+               name = 'S'
+            else:
+               name = 'C'
+            axs[num_arrays-1, i].set_xlabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
+            axs[i, 0].set_ylabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
+
+
+
+        
+
+        #plt.title('FIDA')
+        plt.close('all')
+
+        # Embed the matplotlib figure in the Tkinter canvas
         canvas = FigureCanvasTkAgg(fig, master=self.graph_canvas)
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.grid(row=0, column=0, padx=20, pady=(20, 0), sticky="nsew")
 
-        # Update current graph
+        # Update the current graph reference
         self.current_graph = canvas
+        
+        
+    
+            
+    def suummmm(self,array_1, array_2):
+            MATRIX = np.zeros((len(array_1), len(array_2)))
+            for i in range(len(array_1)):
+                for j in range(len(array_2)):
+                    MATRIX[i, j] = np.sum(array_1[i] * array_2[j])
+                    
+            MATRIX = MATRIX/np.max(MATRIX)
 
-    def dummy_function(self):
-        # Example function for button interaction
-        selected_nbi = self.nbi_optionmenu.get()
-        selected_port = self.port_optionmenu.get()
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        message = f"[{timestamp}]: Selected Port: {selected_port}\nSelected NBI: {selected_nbi}\n\n"
-        self.textbox.insert("end", message)
+            return MATRIX
 
-        # Call the function to generate the graph
-        self.generate_and_show_graph()
+
+
 class Data:
     def __init__(self):
         self.R_x, self.R_y, self.R_z = FuD.all_point(FuD.read_data()[0])
@@ -241,31 +353,42 @@ class Data:
         P_1_for_NBI = self.new_P_1[:, self.valid_indx[NBI_index]]
         P_1_start_for_NBI = self.P_1[:, self.valid_indx[NBI_index]]
         Pname_for_NBI = [self.P_name[i] for i in self.valid_indx[NBI_index]]
-        print(angle)
+        #print(angle)
         valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
             P_1_start_for_NBI, NBI_index, P_1_for_NBI, self.new_NBI_start, self.new_NBI_end, self.surface, float(angle))
         valid_port_names = [Pname_for_NBI[i] for i in valid_indices]
-        print(valid_port_names)
+        #print(valid_port_names)
         return valid_indices, extreme_points_1, extreme_points_2, valid_port_names
 
-    def data_already_input(self):
+    def data_already_input(self, scale = 10):
         Name_Ports = ['2_1_AEA', '2_1_AEM','2_1_AET'] 
-        Name_NBI = ['NBI_7', 'NBI_8' ]
+        Name_NBI = ['NBI_7','NBI_8']
         Port_indices = [self.P_name.index(port) for port in Name_Ports if port in self.P_name]
         NBI_indices = [6,7]
-        data = [[],[]]
+        data = [[] for _ in range(6)]
         for i in range(len(NBI_indices)):
             NBI_index_i = NBI_indices[i]
             P_1_for_NBI_i = self.new_P_1[:, Port_indices]
             P_1_start_for_NBI = self.P_1[:, Port_indices]
             valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
             P_1_start_for_NBI, NBI_index_i, P_1_for_NBI_i, self.new_NBI_start, self.new_NBI_end, self.surface, float(90))
-            data[i] = [Port_indices, np.array(extreme_points_1, dtype=np.float64), np.array(extreme_points_2, dtype=np.float64)]
+
+            for j in range(3):
+             data[i*3+j] = (np.array(extreme_points_1[j], dtype=np.float64), np.array(extreme_points_2[j], dtype=np.float64))  # Добавляем к подмассиву
+
+        print(len(data))
+        
 
 
+        data_B = [[],[],[],[]]
+        for i in range(len(data)):
+              points, B_array = self.Bget.gets(data[i][0], data[i][1], scale)
+              data_B[2].append(points)
+              data_B[3].append(B_array)
 
-        self.Bget.gets(data[0][1][1], data[0][2][1], 3)
-
+        data_B[0] = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
+        data_B[1] = ['2_1_AEA', '2_1_AEM','2_1_AET', '2_1_AEA', '2_1_AEM','2_1_AET']
+        print(data_B)
         return data
     
 
@@ -278,17 +401,20 @@ class calculus():
 
     def gets(self, point1, point2, scale):
       points = np.linspace(point1/100, point2/100, scale)
+      previous_directory = os.getcwd()
       os.chdir('J_0_test')
       mconf_config = {'B0': 2.525,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-10} #trancation of mn harmonics
       eq = mconf.Mconf_equilibrium('w7x-sc1.bc',mconf_config=mconf_config)
+      B_array = []
       for i in range(len(points)):
          B, vecB = eq.get_B(points[i])
          valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
-         print(valueB)
-      print(points)
+         B_array.append(valueB)
+      os.chdir(previous_directory)
+      return points, B_array
 
         
 
