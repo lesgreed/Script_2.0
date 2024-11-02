@@ -9,6 +9,7 @@ import Surface_data as FuD
 import NBI_Ports_data_input as Cout
 import J_0_test.mconf.mconf as mconf
 import os 
+import Weight_Fuction.WF_FIDA as WF
 
 class App(ctk.CTk):
     def __init__(self):
@@ -23,6 +24,7 @@ class App(ctk.CTk):
         # Global variable for slider value
         self.angle = int(90)
         self.scale = 10  # New global variable for the second slider
+        self.oldscale = 10
 
         # Section 1: Sidebar
         self.create_sidebar()
@@ -75,11 +77,11 @@ class App(ctk.CTk):
     
 
     def pre_calculate(self):
-        if len(self.all_results) ==0:
-         Result_array = self.data_instance.data_already_input()  
+        if len(self.all_results) ==0 or self.scale != self.oldscale:
+         Result_array = self.data_instance.data_already_input(self.scale)  
          self.all_results = Result_array
         else:
-            self.all_results = self.all_results[:6]
+            self.all_results = [row[:6] for row in self.all_results]
 
         time = datetime.now().strftime("%H:%M:%S")
         self.textbox.insert("end", f"\n\n [{time}]: Old data ready \n\n ")
@@ -121,7 +123,7 @@ class App(ctk.CTk):
         self.tabview.tab("Setting").grid_columnconfigure(0, weight=1)
 
         # Slider in "Setting" section
-        self.slider_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="Adjust Value:", anchor="w")
+        self.slider_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="Angle Value:", anchor="w")
         self.slider_label.grid(row=0, column=0, padx=20, pady=(10, 0), sticky="w")
 
         self.slider = ctk.CTkSlider(self.tabview.tab("Setting"), from_=30, to=90, command=self.slider_event)
@@ -133,7 +135,7 @@ class App(ctk.CTk):
         self.value_label.grid(row=1, column=1, padx=(10, 20), pady=(10, 20), sticky="w")
 
         # Second slider for values 10 to 100 without intermediate values
-        self.second_slider_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="Adjust Second Value:", anchor="w")
+        self.second_slider_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="Scale Value:", anchor="w")
         self.second_slider_label.grid(row=2, column=0, padx=20, pady=(10, 0), sticky="w")
 
         self.second_slider = ctk.CTkSlider(self.tabview.tab("Setting"), from_=1, to=10, command=self.second_slider_event)
@@ -186,29 +188,34 @@ class App(ctk.CTk):
     def generate_nbi_options(self):
       return [f"NBI_{i}" if i <= 8 else f"CTS_{i-8}" for i in range(1, 12)]
 
-    def create_result_array_for_port(self, data):
-        points, B = data[0], data[1] 
-        #Arrays
-        Result_for_NBI_Port_new = []
+    def create_result_array_for_port(self, selected_nbi, selected_port):
+        data = self.data_instance.data_nbi_ports(selected_nbi, selected_port, self.angle, self.scale)
+        for i in range(len(data)):
+            self.all_results[i].append(data[i])
+        print(self.all_results[0])
+        result_for_i = []
+        for i in range(len(self.all_results[0])):
+            index_nbi = int(self.all_results[0][i].split('_')[-1])-1
+            result_for_j = []
+            for j in range(len(self.all_results[3][i])):
+             if index_nbi<8:
+                x_ev = np.linspace(10, 100, 150)
+                y_ev = np.linspace(-100, 100, 150)/2.5
+                result = WF.weight_Function(self.all_results[4][i][j], self.all_results[3][i][j], x_ev, y_ev)
+                result_for_j.append(result)
+
+             if index_nbi>=8:
+                x_ev = np.linspace(10, 100, 150)
+                y_ev = np.linspace(-100, 100, 150)/2.5
+                result = WF.CTS_wf(self.all_results[6][i][j], self.all_results[3][i][j], x_ev, y_ev)  
+                result_for_j.append(result)
+            result_for_i.append(result_for_j)   
+        print(len(result_for_i))
+        return result_for_i  
 
 
         
-        #for i in range(len(points[0])):
-        #    Vector1 = (NBI_seected_points[0][i]-Point_P_2[0],   NBI_seected_points[1][i]-Point_P_2[1], NBI_seected_points[2][i]-Point_P_2[2])
-        #    vector2 = (vector_B[0][i],vector_B[1][i], vector_B[2][i])
-        #    Angle_1 = angle_between_vectors(Vector1, vector2)
-        #    Angle.append(Angle_1)
 
-        #if Dia =="CTS":
-        # for i in range(len(NBI_seected_points[0])):
-        #     Vector_k_s = (NBI_seected_points[0][i]-Point_P_2[0],   NBI_seected_points[1][i]-Point_P_2[1], NBI_seected_points[2][i]-Point_P_2[2])
-        #     vector_mag = (vector_B[0][i],vector_B[1][i], vector_B[2][i])
-        #     Vector_NBI_k_i = (NBI_seected_points[0][4]-NBI_seected_points[0][0],   NBI_seected_points[1][4]-NBI_seected_points[1][0], NBI_seected_points[2][4]-NBI_seected_points[2][0])
-        #     Vector_k_delta = (Vector_k_s[0] - Vector_NBI_k_i[0],
-        #          Vector_k_s[1] - Vector_NBI_k_i[1],
-        #          Vector_k_s[2] - Vector_NBI_k_i[2])
-        #     Angle_1 = angle_between_vectors(Vector_k_delta, vector_mag)
-        #     Angle.append(Angle_1)
 
     def generate_and_show_graph(self):
         #User
@@ -218,11 +225,7 @@ class App(ctk.CTk):
         #Data
         self.Name_NBI.append(selected_nbi)
         self.Name_Ports.append(selected_port)
-        print(self.Name_NBI)
-        #NBI_seected_points, Point_P_2= self.data_instance.class_data(selected_nbi, selected_port)
-        #NBI_seected_points = np.array(NBI_seected_points)/100
-
-        #Result_for_NBI_Port_NEW= self.create_result_array_for_port(NBI_seected_points, Point_P_2)
+        self.create_result_array_for_port(selected_nbi, selected_port)
     
         # Clear previous graph
         if self.current_graph:
@@ -231,7 +234,7 @@ class App(ctk.CTk):
 
         #self.all_results.append(Result_for_NBI_Port_NEW)
         # Draw the new graph on the canvas
-        self.draw_graph_on_canvas(self.all_results)
+        #self.draw_graph_on_canvas(self.all_results)
 
     def dummy_function(self):
         #User 
@@ -328,6 +331,14 @@ class App(ctk.CTk):
 
 
 class Data:
+        #data_B: [Name NBI; Name Port; Points on NBI; Mag field in this points; Angle between linesight and vec NBI; vec Mag field in points on NBI; angle between vec linesi and magfield]
+        #data_B[0]: Name NBI
+        #data_B[1]: Name Port
+        #data_B[2]: Points on NBI
+        #data_B[3]: Mag field in this points
+        #data_B[4]: Angle between linesight and vec NBI
+        #data_B[5]: vec Mag field in points on NBI
+        #data_B[6]: angle between vec linesi and magfield
     def __init__(self):
         self.R_x, self.R_y, self.R_z = FuD.all_point(FuD.read_data()[0])
         self.P_1, self.P_2, self.P_name = Cout.Ports()
@@ -360,7 +371,7 @@ class Data:
         #print(valid_port_names)
         return valid_indices, extreme_points_1, extreme_points_2, valid_port_names
 
-    def data_already_input(self, scale = 10):
+    def data_already_input(self, scale):
         Name_Ports = ['2_1_AEA', '2_1_AEM','2_1_AET'] 
         Name_NBI = ['NBI_7','NBI_8']
         Port_indices = [self.P_name.index(port) for port in Name_Ports if port in self.P_name]
@@ -376,21 +387,58 @@ class Data:
             for j in range(3):
              data[i*3+j] = (np.array(extreme_points_1[j], dtype=np.float64), np.array(extreme_points_2[j], dtype=np.float64))  # Добавляем к подмассиву
 
-        print(len(data))
+
         
 
 
-        data_B = [[],[],[],[]]
+        data_B = [[],[],[],[],[],[],[]]
         for i in range(len(data)):
-              points, B_array = self.Bget.gets(data[i][0], data[i][1], scale)
+              points, B_array, B_vec_array = self.Bget.gets(data[i][0], data[i][1], scale)
               data_B[2].append(points)
               data_B[3].append(B_array)
+              data_B[5].append(B_vec_array)
 
         data_B[0] = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
         data_B[1] = ['2_1_AEA', '2_1_AEM','2_1_AET', '2_1_AEA', '2_1_AEM','2_1_AET']
-        print(data_B)
-        return data
+        for i in range(len(data_B[1])):
+            index = self.P_name.index(data_B[1][i])
+            point_P_2 = [self.new_P_1[0][index],self.new_P_1[1][index],self.new_P_1[2][index]]
+            point_P_1 = [self.P_1[0][index],self.P_1[1][index],self.P_1[2][index]]
+            angles=[]
+            angles_vec_B = []
+            for j in range(len(data_B[2][i])):
+                angle = geo.check_segment_angle(point_P_1, point_P_2, data_B[2][i][j]*100)
+                angles.append(angle)
+                
+                #angle between vec linesi and magfield
+                vector_AB = np.array(point_P_2) - np.array(point_P_1)  
+                angle_B = geo.check_angle_2_vec(vector_AB/100, data_B[5][i][j])
+                angles_vec_B.append(angle_B)
+                 
+            data_B[4].append(angles)
+            data_B[6].append(angles_vec_B)
+
+        return data_B
     
+    def data_nbi_ports(self, nbi, port, angle, scale):
+        index = self.P_name.index(port)
+        P_1_start = [self.P_1[0][index], self.P_1[1][index], self.P_1[2][index]]
+        P_2_end = [self.new_P_1[0][index], self.new_P_1[1][index], self.new_P_1[2][index]]
+        index_NBI = int(nbi.split('_')[-1])-1
+
+        valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
+            P_1_start, index_NBI, P_2_end, self.new_NBI_start, self.new_NBI_end, self.surface, float(angle))
+        points, B_array, B_vec_array = self.Bget.gets(np.array(extreme_points_1[0], dtype=np.float64), np.array(extreme_points_2[0], dtype=np.float64), scale)
+
+        angles, angles_vec_B=[],[]
+        for j in range(len(points)):
+                angle = geo.check_segment_angle(P_1_start, P_2_end, points[j]*100)
+                angles.append(angle)
+                vector_AB = np.array(P_2_end) - np.array(P_1_start)  
+                angle_B = geo.check_angle_2_vec(vector_AB/100, B_vec_array[j])
+                angles_vec_B.append(angle_B)
+
+        return [nbi, port, points, B_array, angles, B_vec_array, angles_vec_B]
 
 class calculus():
     def __init__(self):
@@ -408,13 +456,15 @@ class calculus():
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-10} #trancation of mn harmonics
       eq = mconf.Mconf_equilibrium('w7x-sc1.bc',mconf_config=mconf_config)
-      B_array = []
+      B_array, B_vec_array = [], []
       for i in range(len(points)):
          B, vecB = eq.get_B(points[i])
          valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
          B_array.append(valueB)
+         B_vec_array.append(vecB)
+
       os.chdir(previous_directory)
-      return points, B_array
+      return points, B_array, B_vec_array
 
         
 

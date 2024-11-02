@@ -92,15 +92,52 @@ def check_segment_angle(point_1, point_2, point_checked):
     #print(angle_deg)
     return angle_deg
 
+def check_angle_2_vec(vector_AB, vector_CD):
+    
+    dot_product = np.dot(vector_AB, vector_CD)
+    
+
+    magnitude_AB = np.linalg.norm(vector_AB)
+    magnitude_CD = np.linalg.norm(vector_CD)
+    
+
+    if magnitude_AB == 0 or magnitude_CD == 0: 
+        return None 
+
+    cos_theta = dot_product / (magnitude_AB * magnitude_CD)
+    
+    cos_theta = np.clip(cos_theta, -1.0, 1.0)
+    
+    angle_rad = np.arccos(cos_theta)
+    
+    angle_deg = np.degrees(angle_rad)
+    #print(angle_deg)
+    return angle_deg
+
 
 
 def find_max_valid_range(P_1, new_P_1, NBI_start, NBI_end, surface, angle):
     mid_point = (NBI_start + NBI_end) / 2
     valid_indices, extreme_points_1, extreme_points_2, valid_lines = [], [], [], []
-    for i, point in enumerate(new_P_1.T):
+    if isinstance(new_P_1[1], np.ndarray):
+     for i, point in enumerate(new_P_1.T):
         point_1 = [P_1[0][i],P_1[1][i], P_1[2][i]]
         if len(check_intersection(point, mid_point, surface)) == 0 and float(check_segment_angle(point_1, point, mid_point))<=angle:
             valid_indices.append(i)
+            if i ==57:
+                print(check_segment_angle(point_1, point, mid_point), point_1, point)
+            direction_to_start = NBI_start - mid_point
+            direction_to_end = NBI_end - mid_point
+            max_start = find_extreme_points(point_1, point, direction_to_start, mid_point, NBI_start, surface, angle)
+            max_end = find_extreme_points(point_1, point, direction_to_end, mid_point, NBI_end, surface, angle)
+            extreme_points_1.append(max_start)
+            extreme_points_2.append(max_end)
+            valid_lines.extend([pv.Line(point, max_start), pv.Line(point, max_end)])
+    else:
+        point =  [new_P_1[0], new_P_1[1], new_P_1[2]]      
+        point_1 = [P_1[0],P_1[1], P_1[2]]
+        if len(check_intersection(point, mid_point, surface)) == 0 and float(check_segment_angle(point_1, point, mid_point))<=angle:
+            valid_indices.append(0)
             direction_to_start = NBI_start - mid_point
             direction_to_end = NBI_end - mid_point
             max_start = find_extreme_points(point_1, point, direction_to_start, mid_point, NBI_start, surface, angle)
@@ -201,7 +238,7 @@ if __name__ == "__main__":
      # Add NBI and ports to plot
     find_good_ports_start_time = time.time() 
     NBI_index = 6
-    angle = 90
+    angle = 60
     valid_indices, extreme_points_1, extreme_points_2, valid_lines = NBI_and_PORTS(P_1, NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface, angle)
     find_good_ports_end_time = time.time()  
     print(valid_indices)
