@@ -225,16 +225,14 @@ class App(ctk.CTk):
         #Data
         self.Name_NBI.append(selected_nbi)
         self.Name_Ports.append(selected_port)
-        self.create_result_array_for_port(selected_nbi, selected_port)
+        results = self.create_result_array_for_port(selected_nbi, selected_port)
     
         # Clear previous graph
         if self.current_graph:
             self.current_graph.get_tk_widget().destroy()
 
-
-        #self.all_results.append(Result_for_NBI_Port_NEW)
         # Draw the new graph on the canvas
-        #self.draw_graph_on_canvas(self.all_results)
+        self.draw_graph_on_canvas(results)
 
     def dummy_function(self):
         #User 
@@ -258,7 +256,7 @@ class App(ctk.CTk):
         Matr= np.empty((num_arrays, num_arrays), dtype=object)
             
         # Create a matplotlib figure
-        fig, axs = plt.subplots(num_arrays, num_arrays, figsize=(8, 8))
+        fig, axs = plt.subplots(num_arrays, num_arrays, figsize=(10, 10))
 
         for i in range(num_arrays):
             for j in range(num_arrays):
@@ -270,7 +268,7 @@ class App(ctk.CTk):
             for j in range(num_arrays):
 
                 One_Matr = Matr[i, j] 
-                im = axs[i, j].imshow(One_Matr, cmap='Blues', origin='upper', aspect='auto', vmin=np.min(color), vmax=1.0)
+                im = axs[i, j].imshow(One_Matr, cmap='plasma', origin='upper', aspect='auto', vmin=np.min(color), vmax=1.0)
 
                 axs[i, j].set_xticks([])
                 axs[i, j].set_yticks([])
@@ -291,7 +289,7 @@ class App(ctk.CTk):
             else:
                 fonts = 9
 
-            selected_nbi = self.Name_NBI[i]
+            selected_nbi = self.all_results[0][i]
             selected_port = self.Name_Ports[i]
             if selected_nbi[0] == 'N':
                name = 'S'
@@ -422,12 +420,17 @@ class Data:
     
     def data_nbi_ports(self, nbi, port, angle, scale):
         index = self.P_name.index(port)
+        print(index)
         P_1_start = [self.P_1[0][index], self.P_1[1][index], self.P_1[2][index]]
         P_2_end = [self.new_P_1[0][index], self.new_P_1[1][index], self.new_P_1[2][index]]
+        
         index_NBI = int(nbi.split('_')[-1])-1
+        if nbi.startswith("CTS"):
+            index_NBI += 8
 
         valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
             P_1_start, index_NBI, P_2_end, self.new_NBI_start, self.new_NBI_end, self.surface, float(angle))
+        print(extreme_points_1)
         points, B_array, B_vec_array = self.Bget.gets(np.array(extreme_points_1[0], dtype=np.float64), np.array(extreme_points_2[0], dtype=np.float64), scale)
 
         angles, angles_vec_B=[],[]

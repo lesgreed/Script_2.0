@@ -59,6 +59,7 @@ def check_intersection(point, candidate_point, surface):
 def find_extreme_points(point_1, point, direction, mid_point, NBI_limit, surface, angle):
         max_valid_point = mid_point
         step_vector = direction / np.linalg.norm(direction)
+        candidate_point = mid_point
         for t in np.linspace(0, 1, 100):
             candidate_point = mid_point + t * step_vector * np.linalg.norm(direction)
             if len(check_intersection(point, candidate_point, surface)) > 0 or check_segment_angle(point_1, point, candidate_point)>angle:
@@ -237,8 +238,8 @@ if __name__ == "__main__":
 
      # Add NBI and ports to plot
     find_good_ports_start_time = time.time() 
-    NBI_index = 6
-    angle = 60
+    NBI_index = 8
+    angle = 90
     valid_indices, extreme_points_1, extreme_points_2, valid_lines = NBI_and_PORTS(P_1, NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface, angle)
     find_good_ports_end_time = time.time()  
     print(valid_indices)
