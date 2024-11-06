@@ -12,6 +12,10 @@ eq = mconf.Mconf_equilibrium('J_0_test\w7x-sc1.bc',mconf_config=mconf_config)
 def get_B(point):
  k, s = eq.get_B(point)
  return np.sqrt(s[0]**2+s[1]**2+s[2]**2)
+def get_Bmax(point):
+  B = eq.get_Bmax(point)
+  return B
+ 
 
 
 

@@ -260,7 +260,7 @@ class App(ctk.CTk):
 
         for i in range(num_arrays):
             for j in range(num_arrays):
-                 MATRIX = self.suummmm(Result_for_NBI_Port[i], Result_for_NBI_Port[j])
+                 MATRIX = self.suummmm(Result_for_NBI_Port[i], Result_for_NBI_Port[j], i, j)
                  min_value = np.min(MATRIX)
                  color = np.append(color, min_value)
                  Matr[i, j]  = MATRIX
@@ -268,7 +268,7 @@ class App(ctk.CTk):
             for j in range(num_arrays):
 
                 One_Matr = Matr[i, j] 
-                im = axs[i, j].imshow(One_Matr, cmap='plasma', origin='upper', aspect='auto', vmin=np.min(color), vmax=1.0)
+                im = axs[i, j].imshow(One_Matr, cmap='rainbow', origin='upper', aspect='auto', vmin=np.min(color), vmax=1.0)
 
                 axs[i, j].set_xticks([])
                 axs[i, j].set_yticks([])
@@ -316,15 +316,31 @@ class App(ctk.CTk):
         
     
             
-    def suummmm(self,array_1, array_2):
-            MATRIX = np.zeros((len(array_1), len(array_2)))
-            for i in range(len(array_1)):
-                for j in range(len(array_2)):
-                    MATRIX[i, j] = np.sum(array_1[i] * array_2[j])
-                    
-            MATRIX = MATRIX/np.max(MATRIX)
+    def suummmm(self, array_1, array_2, first_nbi_index, second_nbi_index):
+     MATRIX = np.zeros((len(array_1), len(array_2)))
+     x_ev = np.linspace(10, 100, 150)
+     y_ev = np.linspace(-100, 100, 150) / 2.5
+     B_max_calc = np.abs(x_ev / y_ev)
+     for i in range(len(array_1)):
+        for j in range(len(array_2)):
+            for k in range(len(x_ev)):
+             if (self.all_results[8][first_nbi_index][i] - B_max_calc[k] < 0.1 and 
+                self.all_results[8][second_nbi_index][j] - B_max_calc[k] < 0.1):
+                
+                if np.abs(self.all_results[7][first_nbi_index][i] - self.all_results[7][second_nbi_index][j]) < 0.1:
+                    MATRIX[i, j] = array_1[i][k] * array_2[j][k]
+                else:
+                    MATRIX[i, j] = 0
+             else:
+                MATRIX[i, j] = array_1[i][k] * array_2[j][k]
+    
+     # Проверка деления на ноль
+     max_value = np.max(MATRIX)
 
-            return MATRIX
+     MATRIX = MATRIX / max_value
+    
+     return MATRIX
+
 
 
 
@@ -337,6 +353,8 @@ class Data:
         #data_B[4]: Angle between linesight and vec NBI
         #data_B[5]: vec Mag field in points on NBI
         #data_B[6]: angle between vec linesi and magfield
+        #data_B[7]: S
+        #data_B[8]: B_max 
     def __init__(self):
         self.R_x, self.R_y, self.R_z = FuD.all_point(FuD.read_data()[0])
         self.P_1, self.P_2, self.P_name = Cout.Ports()
@@ -389,12 +407,14 @@ class Data:
         
 
 
-        data_B = [[],[],[],[],[],[],[]]
+        data_B = [[],[],[],[],[],[],[],[],[]]
         for i in range(len(data)):
-              points, B_array, B_vec_array = self.Bget.gets(data[i][0], data[i][1], scale)
+              points, B_array, B_vec_array, S_array, B_max_array = self.Bget.gets(data[i][0], data[i][1], scale)
               data_B[2].append(points)
               data_B[3].append(B_array)
               data_B[5].append(B_vec_array)
+              data_B[7].append(S_array)
+              data_B[8].append(B_max_array)
 
         data_B[0] = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
         data_B[1] = ['2_1_AEA', '2_1_AEM','2_1_AET', '2_1_AEA', '2_1_AEM','2_1_AET']
@@ -431,7 +451,7 @@ class Data:
         valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
             P_1_start, index_NBI, P_2_end, self.new_NBI_start, self.new_NBI_end, self.surface, float(angle))
         print(extreme_points_1)
-        points, B_array, B_vec_array = self.Bget.gets(np.array(extreme_points_1[0], dtype=np.float64), np.array(extreme_points_2[0], dtype=np.float64), scale)
+        points, B_array, B_vec_array, S_array, B_max_array= self.Bget.gets(np.array(extreme_points_1[0], dtype=np.float64), np.array(extreme_points_2[0], dtype=np.float64), scale)
 
         angles, angles_vec_B=[],[]
         for j in range(len(points)):
@@ -441,7 +461,7 @@ class Data:
                 angle_B = geo.check_angle_2_vec(vector_AB/100, B_vec_array[j])
                 angles_vec_B.append(angle_B)
 
-        return [nbi, port, points, B_array, angles, B_vec_array, angles_vec_B]
+        return [nbi, port, points, B_array, angles, B_vec_array, angles_vec_B,S_array, B_max_array]
 
 class calculus():
     def __init__(self):
@@ -459,15 +479,18 @@ class calculus():
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-10} #trancation of mn harmonics
       eq = mconf.Mconf_equilibrium('w7x-sc1.bc',mconf_config=mconf_config)
-      B_array, B_vec_array = [], []
+      B_array, B_vec_array, S_array, B_max_array= [], [], [], []
       for i in range(len(points)):
-         B, vecB = eq.get_B(points[i])
+         S, vecB = eq.get_B(points[i])
+         B_max = eq.get_Bmax(S)
          valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
          B_array.append(valueB)
          B_vec_array.append(vecB)
+         S_array.append(S)
+         B_max_array.append(B_max)
 
       os.chdir(previous_directory)
-      return points, B_array, B_vec_array
+      return points, B_array, B_vec_array, S_array, B_max_array
 
         
 
