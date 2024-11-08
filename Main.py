@@ -23,6 +23,7 @@ class App(ctk.CTk):
 
         # Global variable for slider value
         self.angle = int(90)
+        self.oldangle = int(90)
         self.scale = 10  # New global variable for the second slider
         self.oldscale = 10
 
@@ -40,6 +41,7 @@ class App(ctk.CTk):
 
         self.current_graph = None
         self.all_results = []
+        self.data_wf = []
         self.Name_Ports = ['2_1_AEA', '2_1_AEA', '2_1_AEM', '2_1_AEM', '2_1_AET', '2_1_AET'] 
         self.Name_NBI = ['NBI_7', 'NBI_8', 'NBI_7', 'NBI_8', 'NBI_7', 'NBI_8' ]
 
@@ -80,6 +82,7 @@ class App(ctk.CTk):
         if len(self.all_results) ==0 or self.scale != self.oldscale:
          Result_array = self.data_instance.data_already_input(self.scale)  
          self.all_results = Result_array
+         self.data_wf = []
         else:
             self.all_results = [row[:6] for row in self.all_results]
 
@@ -194,7 +197,8 @@ class App(ctk.CTk):
             self.all_results[i].append(data[i])
         print(self.all_results[0])
         result_for_i = []
-        for i in range(len(self.all_results[0])):
+        if self.data_wf == []:
+         for i in range(len(self.all_results[0])):
             index_nbi = int(self.all_results[0][i].split('_')[-1])-1
             result_for_j = []
             for j in range(len(self.all_results[3][i])):
@@ -210,8 +214,23 @@ class App(ctk.CTk):
                 result = WF.CTS_wf(self.all_results[6][i][j], self.all_results[3][i][j], x_ev, y_ev)  
                 result_for_j.append(result)
             result_for_i.append(result_for_j)   
-        print(len(result_for_i))
-        return result_for_i  
+         self.data_wf = result_for_i
+        else:
+           index_nbi = int(data[0].split('_')[-1])-1
+           result_for_j = []
+           for j in range(len(data[3])):
+             if index_nbi<8:
+                x_ev = np.linspace(10, 100, 150)
+                y_ev = np.linspace(-100, 100, 150)/2.5
+                result = WF.weight_Function(data[4][j], data[3][j], x_ev, y_ev)
+                result_for_j.append(result)
+
+             if index_nbi>=8:
+                x_ev = np.linspace(10, 100, 150)
+                y_ev = np.linspace(-100, 100, 150)/2.5
+                result = WF.CTS_wf(data[6][j], data[3][j], x_ev, y_ev)  
+                result_for_j.append(result)
+           self.data_wf.append(result_for_j)
 
 
         
@@ -225,14 +244,14 @@ class App(ctk.CTk):
         #Data
         self.Name_NBI.append(selected_nbi)
         self.Name_Ports.append(selected_port)
-        results = self.create_result_array_for_port(selected_nbi, selected_port)
+        self.create_result_array_for_port(selected_nbi, selected_port)
     
         # Clear previous graph
         if self.current_graph:
             self.current_graph.get_tk_widget().destroy()
 
         # Draw the new graph on the canvas
-        self.draw_graph_on_canvas(results)
+        self.draw_graph_on_canvas(self.data_wf)
 
     def dummy_function(self):
         #User 
@@ -260,7 +279,7 @@ class App(ctk.CTk):
 
         for i in range(num_arrays):
             for j in range(num_arrays):
-                 MATRIX = self.suummmm(Result_for_NBI_Port[i], Result_for_NBI_Port[j], i, j)
+                 MATRIX = self.sum(Result_for_NBI_Port[i], Result_for_NBI_Port[j], i, j)
                  min_value = np.min(MATRIX)
                  color = np.append(color, min_value)
                  Matr[i, j]  = MATRIX
@@ -268,11 +287,10 @@ class App(ctk.CTk):
             for j in range(num_arrays):
 
                 One_Matr = Matr[i, j] 
-                im = axs[i, j].imshow(One_Matr, cmap='rainbow', origin='upper', aspect='auto', vmin=np.min(color), vmax=1.0)
+                im = axs[i, j].imshow(One_Matr, cmap='plasma', origin='upper', aspect='auto', vmin=np.min(color), vmax=1.0)
 
                 axs[i, j].set_xticks([])
                 axs[i, j].set_yticks([])
-            print(i)
 
         plt.subplots_adjust(wspace=0, hspace=0)
         
@@ -321,25 +339,95 @@ class App(ctk.CTk):
      x_ev = np.linspace(10, 100, 150)
      y_ev = np.linspace(-100, 100, 150) / 2.5
      B_max_calc = np.abs(x_ev / y_ev)
+     print(len(array_1))
+     print(len(array_1[1]))
+     print(len(array_1[1][1]))
+
+
      for i in range(len(array_1)):
-        for j in range(len(array_2)):
-            for k in range(len(x_ev)):
-             if (self.all_results[8][first_nbi_index][i] - B_max_calc[k] < 0.1 and 
-                self.all_results[8][second_nbi_index][j] - B_max_calc[k] < 0.1):
-                
-                if np.abs(self.all_results[7][first_nbi_index][i] - self.all_results[7][second_nbi_index][j]) < 0.1:
-                    MATRIX[i, j] = array_1[i][k] * array_2[j][k]
-                else:
-                    MATRIX[i, j] = 0
-             else:
-                MATRIX[i, j] = array_1[i][k] * array_2[j][k]
-    
-     # Проверка деления на ноль
+      for j in range(len(array_2)):
+
+        mask = (x_ev < 2.5) & (y_ev < 2.5)  
+        product = array_1[i] * array_2[j]
+        product *= mask  # Применение маски: зануление элементов, которые не соответствуют условию
+        MATRIX[i, j] = np.sum(product)
+
+
      max_value = np.max(MATRIX)
 
      MATRIX = MATRIX / max_value
     
      return MATRIX
+
+    def sum(self, array_1, array_2, first_nbi_index, second_nbi_index):
+        MATRIX = np.zeros((len(array_1), len(array_2)))
+
+        # Определите x_ev и y_ev
+        x_ev = np.linspace(10, 100, 150)
+        y_ev = np.linspace(-100, 100, 150) / 2.5
+        x_ev, y_ev = np.meshgrid(x_ev, y_ev)
+
+        # Расчет отношения x_ev / y_ev
+        ratio = x_ev / y_ev
+
+        # Значения B_max, s_1 и s_2 для массивов
+        B_max_array_1 = self.all_results[8][first_nbi_index]   # Массив или список длиной 10 для array_1
+        B_max_array_2 = self.all_results[8][second_nbi_index]  # Массив или список длиной 10 для array_2
+        s_1_array = self.all_results[7][first_nbi_index]       # Массив или список s_1 для array_1
+        s_2_array = self.all_results[7][second_nbi_index]      # Массив или список s_2 для array_2
+
+        for i in range(len(array_1)):
+            for j in range(len(array_2)):
+
+                B_max_i = B_max_array_1[i]
+                B_max_j = B_max_array_2[j]
+                s_1_i = s_1_array[i]
+                s_2_j = s_2_array[j]
+
+                mask_i = (ratio > B_max_i)
+                mask_j = (ratio > B_max_j)
+
+                # Проверка условия для обоих слоев: отношение больше B_max
+                both_above_B_mask = mask_i & mask_j
+
+                # Проверка условия для обоих слоев: отношение меньше B_max
+                both_below_B_mask = np.logical_not(mask_i) & np.logical_not(mask_j)
+
+                # Проверка условия, когда одно меньше, а другое больше
+                cross_check_mask = np.logical_not((mask_i & np.logical_not(mask_j)) | (np.logical_not(mask_i) & mask_j))
+
+                # Маска для проверки равенства s_1 и s_2
+                equal_s_mask = np.abs(s_1_i - s_2_j) < 0.1
+
+                # Итоговая маска для зануления при обоих отношениях выше B_max и s_1 != s_2
+                mask_condition_1 = both_above_B_mask & np.logical_not(equal_s_mask)
+
+                # Итоговая маска для умножения при обоих отношениях выше B_max и s_1 == s_2
+                mask_condition_2 = both_above_B_mask & equal_s_mask
+
+                # Итоговая маска для умножения при обоих отношениях ниже B_max
+                mask_condition_3 = both_below_B_mask
+
+                # Итоговая маска для зануления, когда соотношения разные для массивов
+                mask_condition_4 = np.logical_not(cross_check_mask)
+
+                # Применяем условия к произведению слоев
+                product = array_1[i] * array_2[j]
+ 
+                # Обнуление элементов по условиям
+                product[mask_condition_1 | mask_condition_4] = 0
+
+                MATRIX[i, j] = np.sum(product)
+
+
+        # Нормализация матрицы
+        max_value = np.max(MATRIX)
+        MATRIX /= max_value
+
+        return MATRIX
+    
+
+
 
 
 
@@ -355,6 +443,7 @@ class Data:
         #data_B[6]: angle between vec linesi and magfield
         #data_B[7]: S
         #data_B[8]: B_max 
+        #data_B[9]: results
     def __init__(self):
         self.R_x, self.R_y, self.R_z = FuD.all_point(FuD.read_data()[0])
         self.P_1, self.P_2, self.P_name = Cout.Ports()
@@ -440,7 +529,6 @@ class Data:
     
     def data_nbi_ports(self, nbi, port, angle, scale):
         index = self.P_name.index(port)
-        print(index)
         P_1_start = [self.P_1[0][index], self.P_1[1][index], self.P_1[2][index]]
         P_2_end = [self.new_P_1[0][index], self.new_P_1[1][index], self.new_P_1[2][index]]
         
