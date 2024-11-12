@@ -26,6 +26,7 @@ class App(ctk.CTk):
         self.oldangle = int(90)
         self.scale = 10  # New global variable for the second slider
         self.oldscale = 10
+        self.delta_s = 0.55
 
         # Section 1: Sidebar
         self.create_sidebar()
@@ -145,6 +146,17 @@ class App(ctk.CTk):
         self.second_slider.set(self.scale // 10)  # Set initial value based on second_slider_value
         self.second_slider.grid(row=3, column=0, padx=20, pady=(10, 20), sticky="w")
 
+        # Label for Delta s with Greek symbol
+        self.delta_s_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="Δs:", anchor="w")
+        self.delta_s_label.grid(row=4, column=0, padx=20, pady=(10, 0), sticky="w")
+
+        # Entry for Delta s value
+        self.delta_s_entry = ctk.CTkEntry(self.tabview.tab("Setting"), width=100)
+        self.delta_s_entry.insert(0, str(self.delta_s))  # Set initial value
+        self.delta_s_entry.grid(row=5, column=0, padx=20, pady=(10, 20), sticky="w")
+
+        # Bind the entry to update value automatically when changed
+        self.delta_s_entry.bind("<Return>", self.update_delta_s)
         # Label to display the current value of the second slider
         self.second_value_label = ctk.CTkLabel(self.tabview.tab("Setting"), text=str(self.scale))
         self.second_value_label.grid(row=3, column=1, padx=(10, 20), pady=(10, 20), sticky="w")
@@ -161,6 +173,18 @@ class App(ctk.CTk):
     def slider_event(self, value):
         self.angle = int(value)
         self.value_label.configure(text=str(self.angle))
+    # Method to apply the new Delta s value
+
+    def update_delta_s(self, event):  # Добавлено event=None
+        try:
+            new_value = float(self.delta_s_entry.get())
+            self.delta_s = new_value
+            print(f"Delta s updated to: {self.delta_s}")
+            # Вставка сообщения в текстовое поле
+            self.textbox.insert("end", f"Δs updated to: {self.delta_s}\n\n")
+        except ValueError:
+            self.textbox.insert("end", "Invalid input. Please enter a numerical value.\n\n")
+
 
 
     def generate_port_options(self, selected_nbi: str):
@@ -397,7 +421,7 @@ class App(ctk.CTk):
                 cross_check_mask = np.logical_not((mask_i & np.logical_not(mask_j)) | (np.logical_not(mask_i) & mask_j))
 
                 # Маска для проверки равенства s_1 и s_2
-                equal_s_mask = np.abs(s_1_i - s_2_j) < 0.1
+                equal_s_mask = np.abs(s_1_i - s_2_j) <= self.delta_s
 
                 # Итоговая маска для зануления при обоих отношениях выше B_max и s_1 != s_2
                 mask_condition_1 = both_above_B_mask & np.logical_not(equal_s_mask)
@@ -570,6 +594,12 @@ class calculus():
       B_array, B_vec_array, S_array, B_max_array= [], [], [], []
       for i in range(len(points)):
          S, vecB = eq.get_B(points[i])
+         #if i != 0:
+          #print("Distance:", np.sqrt((points[i][0]-points[i-1][0])**2 + (points[i][1]-points[i-1][1])**2 + (points[i][2]-points[i-1][2])**2))
+          #print("S", S)
+          #print("point1", points[i])
+          #print("point2", points[i-1])
+
          B_max = eq.get_Bmax(S)
          valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
          B_array.append(valueB)

@@ -205,8 +205,8 @@ def visualisation(surface,lines1, lines2,NBI_index,new_P_1,valid_indices, new_NB
     #for line in lines1:
      #   plotter.add_mesh(line, color='yellow', line_width=3)
 
-    #for line in lines2:
-    #    plotter.add_mesh(line, color='red', line_width=3)
+    for line in lines2:
+        plotter.add_mesh(line, color='red', line_width=3)
     plotter.show()
 
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 
      # Add NBI and ports to plot
     find_good_ports_start_time = time.time() 
-    NBI_index = 8
+    NBI_index = 1
     angle = 90
     valid_indices, extreme_points_1, extreme_points_2, valid_lines = NBI_and_PORTS(P_1, NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface, angle)
     find_good_ports_end_time = time.time()  
