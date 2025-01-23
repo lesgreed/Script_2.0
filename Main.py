@@ -10,6 +10,8 @@ import NBI_Ports_data_input as Cout
 import J_0_test.mconf.mconf as mconf
 import os 
 import Weight_Fuction.WF_FIDA as WF
+from scipy.integrate import solve_ivp
+from scipy.integrate import cumulative_trapezoid as cumtrapz
 
 class App(ctk.CTk):
     def __init__(self):
@@ -26,7 +28,8 @@ class App(ctk.CTk):
         self.oldangle = int(90)
         self.scale = 10  # New global variable for the second slider
         self.oldscale = 10
-        self.delta_s = 0.55
+        self.delta_s = 0.1
+        self.delta_J_0 = 0.01 
 
         # Section 1: Sidebar
         self.create_sidebar()
@@ -89,6 +92,7 @@ class App(ctk.CTk):
 
         time = datetime.now().strftime("%H:%M:%S")
         self.textbox.insert("end", f"\n\n [{time}]: Old data ready \n\n ")
+        #print(self.all_results)
         
     def create_additional_widgets(self):
         # create textbox
@@ -217,9 +221,10 @@ class App(ctk.CTk):
 
     def create_result_array_for_port(self, selected_nbi, selected_port):
         data = self.data_instance.data_nbi_ports(selected_nbi, selected_port, self.angle, self.scale)
+
         for i in range(len(data)):
             self.all_results[i].append(data[i])
-        print(self.all_results[0])
+        #print(self.all_results[0])
         result_for_i = []
         if self.data_wf == []:
          for i in range(len(self.all_results[0])):
@@ -227,14 +232,14 @@ class App(ctk.CTk):
             result_for_j = []
             for j in range(len(self.all_results[3][i])):
              if index_nbi<8:
-                x_ev = np.linspace(10, 100, 150)
-                y_ev = np.linspace(-100, 100, 150)/2.5
+                x_ev = np.linspace(10, 100, 100)
+                y_ev = np.linspace(-100, 100, 100)/2.5
                 result = WF.weight_Function(self.all_results[4][i][j], self.all_results[3][i][j], x_ev, y_ev)
                 result_for_j.append(result)
 
              if index_nbi>=8:
-                x_ev = np.linspace(10, 100, 150)
-                y_ev = np.linspace(-100, 100, 150)/2.5
+                x_ev = np.linspace(10, 100, 100)
+                y_ev = np.linspace(-100, 100, 100)/2.5
                 result = WF.CTS_wf(self.all_results[6][i][j], self.all_results[3][i][j], x_ev, y_ev)  
                 result_for_j.append(result)
             result_for_i.append(result_for_j)   
@@ -244,14 +249,14 @@ class App(ctk.CTk):
            result_for_j = []
            for j in range(len(data[3])):
              if index_nbi<8:
-                x_ev = np.linspace(10, 100, 150)
-                y_ev = np.linspace(-100, 100, 150)/2.5
+                x_ev = np.linspace(10, 100, 100)
+                y_ev = np.linspace(-100, 100, 100)/2.5
                 result = WF.weight_Function(data[4][j], data[3][j], x_ev, y_ev)
                 result_for_j.append(result)
 
              if index_nbi>=8:
-                x_ev = np.linspace(10, 100, 150)
-                y_ev = np.linspace(-100, 100, 150)/2.5
+                x_ev = np.linspace(10, 100, 100)
+                y_ev = np.linspace(-100, 100, 100)/2.5
                 result = WF.CTS_wf(data[6][j], data[3][j], x_ev, y_ev)  
                 result_for_j.append(result)
            self.data_wf.append(result_for_j)
@@ -358,100 +363,112 @@ class App(ctk.CTk):
         
     
             
-    def suummmm(self, array_1, array_2, first_nbi_index, second_nbi_index):
-     MATRIX = np.zeros((len(array_1), len(array_2)))
-     x_ev = np.linspace(10, 100, 150)
-     y_ev = np.linspace(-100, 100, 150) / 2.5
-     B_max_calc = np.abs(x_ev / y_ev)
-     print(len(array_1))
-     print(len(array_1[1]))
-     print(len(array_1[1][1]))
 
+
+    def sum(self, array_1, array_2, first_nbi_index, second_nbi_index):
+     MATRIX = np.zeros((len(array_1), len(array_2)))
+
+     
+     x_ev = np.linspace(10, 100, 100)
+     y_ev = np.linspace(-100, 100, 100) / 2.5
+     x_ev, y_ev = np.meshgrid(x_ev, y_ev)
+
+     
+     ratio = x_ev / y_ev
+
+     # Значения B_max, s_1 и s_2 для массивов
+     B_max_array_1 = self.all_results[8][first_nbi_index]
+     B_max_array_2 = self.all_results[8][second_nbi_index]
+     s_1_array = self.all_results[7][first_nbi_index]
+     s_2_array = self.all_results[7][second_nbi_index]
+     J_0_array_1 = np.array(self.all_results[9][first_nbi_index])  
+     J_0_array_2 = np.array(self.all_results[9][second_nbi_index])  
 
      for i in range(len(array_1)):
-      for j in range(len(array_2)):
+        for j in range(len(array_2)):
+            B_max_i = B_max_array_1[i]
+            B_max_j = B_max_array_2[j]
+            s_1_i = s_1_array[i]
+            s_2_j = s_2_array[j]
 
-        mask = (x_ev < 2.5) & (y_ev < 2.5)  
-        product = array_1[i] * array_2[j]
-        product *= mask  # Применение маски: зануление элементов, которые не соответствуют условию
-        MATRIX[i, j] = np.sum(product)
+            mask_i = (ratio > B_max_i)
+            mask_j = (ratio > B_max_j)
+
+            
+            x_idx = i % x_ev.shape[0]  
+            y_idx = j % y_ev.shape[1]  
+            
+            J_0_i = J_0_array_1[x_idx, y_idx]  
+            J_0_j = J_0_array_2[x_idx, y_idx]  
+
+           
+            both_above_B_mask = mask_i & mask_j
+
+           
+            both_below_B_mask = np.logical_not(mask_i) & np.logical_not(mask_j)
+
+           
+            cross_check_mask = np.logical_not((mask_i & np.logical_not(mask_j)) | (np.logical_not(mask_i) & mask_j))
+            
+
+            # Избегаем деления на ноль: создаем маску ненулевых значений
+            nonzero_mask = (np.abs(J_0_j) > 1) & (np.abs(J_0_i) > 1)
+
+            # Вычисляем маску, сравнивая J_0_i и J_0_j
+            ratio_mask = np.abs(np.abs(J_0_i / J_0_j)-1) <=  (self.delta_J_0)
+            diff_mask = np.abs(J_0_i - J_0_j) <= self.delta_J_0
+
+            # Применяем правильную маску в зависимости от наличия нуля в J_0_j
+            both_below_B_and_J_0_check_mask = both_below_B_mask & np.where(nonzero_mask, ratio_mask, diff_mask)
+            
+            #both_below_B_and_J_0_check_mask = both_below_B_mask & (np.abs(J_0_i -J_0_j) <= self.delta_J_0)
+
+            
+            # Избегаем деления на ноль: создаем маску ненулевых значений
+            nonzero_mask_s = (np.abs(s_1_i) > 1e10) & (np.abs(s_2_j) > 1e10)
+
+            # Вычисляем маску, сравнивая J_0_i и J_0_j
+            ratio_mask_s = np.abs(np.abs(s_1_i / s_2_j)-1) <=  0.01
+            diff_mask_s = np.abs(s_1_i - s_2_j) <= self.delta_s
+
+
+
+            equal_s_mask = np.where(nonzero_mask_s, ratio_mask_s, diff_mask_s)
+
+           
+            mask_condition_1 = both_above_B_mask & np.logical_not(equal_s_mask)
+
+            
+            mask_condition_2 = both_above_B_mask & equal_s_mask
+
+           
+            mask_condition_3 = both_below_B_mask
+
+            
+            mask_condition_4 = np.logical_not(cross_check_mask)
+
+            
+            mask_condition_5 = both_below_B_and_J_0_check_mask
+
+           
+            product = array_1[i] * array_2[j]
+
+            product[mask_condition_1] = 0
+            product[mask_condition_4] = 0
+            product[mask_condition_5] = 0
+
+
+            MATRIX[i, j] = np.sum(product)
+            #print(MATRIX[i, j])
+
+
+
 
 
      max_value = np.max(MATRIX)
+     MATRIX /= max_value
 
-     MATRIX = MATRIX / max_value
-    
      return MATRIX
-
-    def sum(self, array_1, array_2, first_nbi_index, second_nbi_index):
-        MATRIX = np.zeros((len(array_1), len(array_2)))
-
-        # Определите x_ev и y_ev
-        x_ev = np.linspace(10, 100, 150)
-        y_ev = np.linspace(-100, 100, 150) / 2.5
-        x_ev, y_ev = np.meshgrid(x_ev, y_ev)
-
-        # Расчет отношения x_ev / y_ev
-        ratio = x_ev / y_ev
-
-        # Значения B_max, s_1 и s_2 для массивов
-        B_max_array_1 = self.all_results[8][first_nbi_index]   # Массив или список длиной 10 для array_1
-        B_max_array_2 = self.all_results[8][second_nbi_index]  # Массив или список длиной 10 для array_2
-        s_1_array = self.all_results[7][first_nbi_index]       # Массив или список s_1 для array_1
-        s_2_array = self.all_results[7][second_nbi_index]      # Массив или список s_2 для array_2
-
-        for i in range(len(array_1)):
-            for j in range(len(array_2)):
-
-                B_max_i = B_max_array_1[i]
-                B_max_j = B_max_array_2[j]
-                s_1_i = s_1_array[i]
-                s_2_j = s_2_array[j]
-
-                mask_i = (ratio > B_max_i)
-                mask_j = (ratio > B_max_j)
-
-                # Проверка условия для обоих слоев: отношение больше B_max
-                both_above_B_mask = mask_i & mask_j
-
-                # Проверка условия для обоих слоев: отношение меньше B_max
-                both_below_B_mask = np.logical_not(mask_i) & np.logical_not(mask_j)
-
-                # Проверка условия, когда одно меньше, а другое больше
-                cross_check_mask = np.logical_not((mask_i & np.logical_not(mask_j)) | (np.logical_not(mask_i) & mask_j))
-
-                # Маска для проверки равенства s_1 и s_2
-                equal_s_mask = np.abs(s_1_i - s_2_j) <= self.delta_s
-
-                # Итоговая маска для зануления при обоих отношениях выше B_max и s_1 != s_2
-                mask_condition_1 = both_above_B_mask & np.logical_not(equal_s_mask)
-
-                # Итоговая маска для умножения при обоих отношениях выше B_max и s_1 == s_2
-                mask_condition_2 = both_above_B_mask & equal_s_mask
-
-                # Итоговая маска для умножения при обоих отношениях ниже B_max
-                mask_condition_3 = both_below_B_mask
-
-                # Итоговая маска для зануления, когда соотношения разные для массивов
-                mask_condition_4 = np.logical_not(cross_check_mask)
-
-                # Применяем условия к произведению слоев
-                product = array_1[i] * array_2[j]
- 
-                # Обнуление элементов по условиям
-                product[mask_condition_1 | mask_condition_4] = 0
-
-                MATRIX[i, j] = np.sum(product)
-
-
-        # Нормализация матрицы
-        max_value = np.max(MATRIX)
-        MATRIX /= max_value
-
-        return MATRIX
-    
-
-
 
 
 
@@ -468,6 +485,7 @@ class Data:
         #data_B[7]: S
         #data_B[8]: B_max 
         #data_B[9]: results
+        #data_B[10]: J_0
     def __init__(self):
         self.R_x, self.R_y, self.R_z = FuD.all_point(FuD.read_data()[0])
         self.P_1, self.P_2, self.P_name = Cout.Ports()
@@ -514,20 +532,27 @@ class Data:
             P_1_start_for_NBI, NBI_index_i, P_1_for_NBI_i, self.new_NBI_start, self.new_NBI_end, self.surface, float(90))
 
             for j in range(3):
-             data[i*3+j] = (np.array(extreme_points_1[j], dtype=np.float64), np.array(extreme_points_2[j], dtype=np.float64))  # Добавляем к подмассиву
+             data[i*3+j] = (np.array(extreme_points_1[j], dtype=np.float64), np.array(extreme_points_2[j], dtype=np.float64))  # Добавляем к подмассив
 
 
-        
-
-
-        data_B = [[],[],[],[],[],[],[],[],[]]
+        data_B = [[],[],[],[],[],[],[],[],[],[]]
         for i in range(len(data)):
               points, B_array, B_vec_array, S_array, B_max_array = self.Bget.gets(data[i][0], data[i][1], scale)
               data_B[2].append(points)
+              #print(points)
               data_B[3].append(B_array)
               data_B[5].append(B_vec_array)
               data_B[7].append(S_array)
               data_B[8].append(B_max_array)
+        for i in range(len(data_B[2])):
+  
+            J_0_array = []
+            for j in range(len(data_B[2][i])):
+             J_0 = self.Bget.J_0_calculate(data_B[2][i][j])
+             J_0_array.append(J_0)
+             #print(J_0)
+            data_B[9].append(J_0_array)
+
 
         data_B[0] = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
         data_B[1] = ['2_1_AEA', '2_1_AEM','2_1_AET', '2_1_AEA', '2_1_AEM','2_1_AET']
@@ -562,18 +587,20 @@ class Data:
 
         valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
             P_1_start, index_NBI, P_2_end, self.new_NBI_start, self.new_NBI_end, self.surface, float(angle))
-        print(extreme_points_1)
+        #print(extreme_points_1)
         points, B_array, B_vec_array, S_array, B_max_array= self.Bget.gets(np.array(extreme_points_1[0], dtype=np.float64), np.array(extreme_points_2[0], dtype=np.float64), scale)
 
-        angles, angles_vec_B=[],[]
+        angles, angles_vec_B, J_0_array=[],[], []
         for j in range(len(points)):
                 angle = geo.check_segment_angle(P_1_start, P_2_end, points[j]*100)
                 angles.append(angle)
                 vector_AB = np.array(P_2_end) - np.array(P_1_start)  
                 angle_B = geo.check_angle_2_vec(vector_AB/100, B_vec_array[j])
                 angles_vec_B.append(angle_B)
+                J_0 = self.Bget.J_0_calculate(points[j])
+                J_0_array.append(J_0)
 
-        return [nbi, port, points, B_array, angles, B_vec_array, angles_vec_B,S_array, B_max_array]
+        return [nbi, port, points, B_array, angles, B_vec_array, angles_vec_B,S_array, B_max_array, J_0_array]
 
 class calculus():
     def __init__(self):
@@ -583,13 +610,17 @@ class calculus():
 
 
     def gets(self, point1, point2, scale):
-      points = np.linspace(point1/100, point2/100, scale)
+      point1 = point1/100
+      point2= point2/100
+      points = np.linspace(point1, point2, scale)
+      #print(points)
+      points = points[1:-1]
       previous_directory = os.getcwd()
       os.chdir('J_0_test')
       mconf_config = {'B0': 2.525,
                 'B0_angle': 0.0,
-                'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
-                'truncation': 1e-10} #trancation of mn harmonics
+                'accuracy': 1e-8, #accuracy of magnetic to cartesian coordinat transformation
+                'truncation': 1e-8} #trancation of mn harmonics
       eq = mconf.Mconf_equilibrium('w7x-sc1.bc',mconf_config=mconf_config)
       B_array, B_vec_array, S_array, B_max_array= [], [], [], []
       for i in range(len(points)):
@@ -609,6 +640,117 @@ class calculus():
 
       os.chdir(previous_directory)
       return points, B_array, B_vec_array, S_array, B_max_array
+     
+
+    def J_0_calculate(self, point):
+      point = np.array(point, dtype=np.float64)
+      print(point)
+      previous_directory = os.getcwd()
+      os.chdir('J_0_test')
+      mconf_config = {'B0': 2.525,
+                'B0_angle': 0.0,
+                'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
+                'truncation': 1e-10} #trancation of mn harmonics
+      eq = mconf.Mconf_equilibrium('w7x-sc1.bc',mconf_config=mconf_config)
+
+      L = 400  
+      N = 1000 
+      rhs_B = lambda l, y: eq.get_B(y)[1] / np.linalg.norm(eq.get_B(y)[1])
+      rhs_B_backward = lambda l, y: -eq.get_B(y)[1] / np.linalg.norm(eq.get_B(y)[1])
+
+
+      forward_sol = solve_ivp(rhs_B, [0, L], point, method='RK45', max_step=L / N, atol=1e-6, dense_output=True)
+      forward_s, forward_B = eq.get_s_B_T(forward_sol.y[0], forward_sol.y[1], forward_sol.y[2])
+      forward_magB = np.linalg.norm(forward_B, axis=1)
+      forward_path = np.zeros(forward_sol.y.shape[1])
+      forward_path[1:] = np.cumsum(np.sqrt(np.sum(np.diff(forward_sol.y, axis=-1)**2, axis=0)))
+
+
+
+      backward_sol = solve_ivp(rhs_B_backward, [0, L], point, method='RK45', max_step=L / N, atol=1e-6, dense_output=True)
+      backward_s, backward_B = eq.get_s_B_T(backward_sol.y[0], backward_sol.y[1], backward_sol.y[2])
+      backward_magB = np.linalg.norm(backward_B, axis=1)
+      backward_path = np.zeros(backward_sol.y.shape[1])
+      backward_path[1:] = np.cumsum(np.sqrt(np.sum(np.diff(backward_sol.y, axis=-1)**2, axis=0)))
+
+      
+      E_values = np.linspace(10, 100, 100) * (1.6 * 10**(-19)) * 10**3  
+      mu_values = np.linspace(0.1, 100, 100) * (1.6 * 10**(-19)) * 10**3 
+
+      J_0_map = np.zeros((len(E_values), len(mu_values)))
+
+  
+      for i, E in enumerate(E_values):
+          for j, mu in enumerate(mu_values):
+              
+              B_max = E / mu
+
+              
+              forward_mask = forward_magB <= B_max
+              forward_idx_limit = np.argmax(~forward_mask) if np.any(~forward_mask) else len(forward_magB)
+              forward_magB_limited = forward_magB[:forward_idx_limit]
+              forward_path_limited = forward_path[:forward_idx_limit]
+              
+              forward_integrand = np.sqrt(2 * mu * (B_max - forward_magB_limited))
+
+
+              backward_mask = backward_magB <= B_max
+              backward_idx_limit = np.argmax(~backward_mask) if np.any(~backward_mask) else len(backward_magB)
+              backward_magB_limited = backward_magB[:backward_idx_limit]
+              backward_path_limited = backward_path[:backward_idx_limit]
+              
+              backward_integrand = np.sqrt(2 * mu * (B_max - backward_magB_limited))
+
+
+              
+
+        
+              B_initial = forward_magB[0]  
+              if E/mu <= B_initial:
+                  J_0_map[i, j] = 0
+                  continue
+      
+              
+              complete_path = np.concatenate([
+                backward_path_limited[::-1],  
+                forward_path_limited,         
+                forward_path_limited[::-1],   
+                backward_path_limited         
+                ])
+
+              complete_integrand = np.concatenate([
+                backward_integrand[::-1],    
+                forward_integrand,           
+                forward_integrand[::-1],     
+                backward_integrand          
+                ])
+
+              J_0 = self.trapezoidal_integral(complete_integrand, complete_path)
+              J_0_map[i, j] = J_0
+              #print(J_0_map[i, j])
+              
+      os.chdir(previous_directory)
+      return J_0_map
+    
+    def trapezoidal_integral(self, f, s):
+
+      # Проверяем, что размеры массивов совпадают
+      if len(s) != len(f):
+        raise ValueError("Длины массивов s и f должны совпадать")
+
+      # Вычисляем разности между соседними точками s
+      ds = np.abs(np.diff(s))
+
+      # Средние значения функции между соседними точками
+      avg_f = (f[:-1] + f[1:]) / 2
+
+      # Интеграл на каждом сегменте
+      segment_integrals = ds * avg_f
+
+      # Суммируем все сегментные интегралы
+      integral = np.sum(segment_integrals)
+    
+      return integral
 
         
 

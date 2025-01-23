@@ -25,6 +25,9 @@ def find_first_two_intersections(surface, point, direction):
     intersections = surface.ray_trace(point, ray_end)[0]
     return intersections[0], intersections[1]  
 
+
+
+
 def get_intersection_points_NBI(NBI_X, NBI_Y, NBI_Z, NBI_uvec_X, NBI_uvec_Y, NBI_uvec_Z, surface):
     new_NBI_start, new_NBI_end, lines = [], [], []
     NBI_P1 = np.array([NBI_X, NBI_Y, NBI_Z])
@@ -33,9 +36,22 @@ def get_intersection_points_NBI(NBI_X, NBI_Y, NBI_Z, NBI_uvec_X, NBI_uvec_Y, NBI
     for i in range(NBI_P1.shape[1]):
         start_point, direction_vector = NBI_P1[:, i], NBI_P2[:, i]
         intersection1, intersection2 = find_first_two_intersections(surface, start_point, direction_vector)
-        new_NBI_start.append(intersection1)
-        new_NBI_end.append(intersection2)
-        lines.append(pv.Line(intersection1, intersection2))
+
+
+        
+        # Вектор от intersection1 к intersection2
+        direction_vector = intersection2 - intersection1
+        
+        # Нормализуем вектор
+        direction_normalized = direction_vector / np.linalg.norm(direction_vector)
+
+        # Смещаем обе точки внутрь на заданное расстояние
+        intersection1_shifted = intersection1 + direction_normalized * 20
+        intersection2_shifted = intersection2 - direction_normalized * 20
+        
+        new_NBI_start.append(intersection1_shifted)
+        new_NBI_end.append(intersection2_shifted)
+        lines.append(pv.Line(intersection1_shifted, intersection2_shifted))
 
     return np.array(new_NBI_start).T, np.array(new_NBI_end).T, lines
 
@@ -65,6 +81,8 @@ def find_extreme_points(point_1, point, direction, mid_point, NBI_limit, surface
             if len(check_intersection(point, candidate_point, surface)) > 0 or check_segment_angle(point_1, point, candidate_point)>angle:
                 break
             max_valid_point = candidate_point
+            if t == 90:
+                break
         return max_valid_point
 import numpy as np
 
