@@ -12,6 +12,7 @@ from scipy.integrate import cumulative_trapezoid as cumtrapz
 def transform(R, Z, phi):
     x = R   # Use R directly for x-axis
     y = Z  # Use Z directly for y-axis
+    
     return x, y
 
 def inverse_transform(R, Z, Phi):
@@ -19,78 +20,14 @@ def inverse_transform(R, Z, Phi):
     phi_radian = np.radians(Phi)
     x = R * np.cos(phi_radian)
     y = R * np.sin(phi_radian)
+    z = Z
     return x, y, z
-
-
-def trapezoidal_integral(f, s):
-    """
-    Интегрирование функции f(s) по пути, используя метод трапеций.
-
-    Параметры:
-    ----------
-    s : ndarray
-        Массив расстояний от нулевой точки.
-    f : ndarray
-        Массив значений функции f(s) в точках s.
-
-    Возвращает:
-    ----------
-    integral : float
-        Результат интегрирования.
-    """
-    # Проверяем, что размеры массивов совпадают
-    if len(s) != len(f):
-        raise ValueError("Длины массивов s и f должны совпадать")
-
-    # Вычисляем разности между соседними точками s
-    ds = np.abs(np.diff(s))
-
-    # Средние значения функции между соседними точками
-    avg_f = (f[:-1] + f[1:]) / 2
-
-    # Интеграл на каждом сегменте
-    segment_integrals = ds * avg_f
-
-    # Суммируем все сегментные интегралы
-    integral = np.sum(segment_integrals)
-    
-    return integral
-
-
-
-def J_0_calculate(points):
-    points = np.array(points, dtype=np.float64) / 100  
-    previous_directory = os.getcwd()
-
-
-    
-    os.chdir('J_0_test')
-
-    mconf_config = {
-            'B0': 2.525,
-            'B0_angle': 0.0,
-            'accuracy': 1e-2,  
-            'truncation': 1e-2  
-        }
-
-    eq = mconf.Mconf_equilibrium('wout_EIM_0.txt', mconf_config=mconf_config)
-    J_0_all = np.zeros(len(points))  
-    L = 20; N = 10000; 
-    from scipy.integrate import solve_ivp
-    rhs_B_fortran1 = lambda t, y:  eq.get_B(y)[1]
-
-    r1 = np.array(eq.mag2xyz(0.1,0.,0.))
-    print(r1)
-    print(eq.mag_B(*r1))
-       
-
-    return J_0_all
-
 
 
 def MagField(points):
       previous_directory = os.getcwd()
-      os.chdir('J_0_test')
+      points = np.array(points, dtype=np.float64)/ 100  
+      os.chdir('Script_2.0\J_0_test')
       mconf_config = {'B0': 2.525,
                 'B0_angle': 0.0,
                 'accuracy': 1e-8, #accuracy of magnetic to cartesian coordinat transformation
@@ -126,8 +63,8 @@ if __name__ == "__main__":
     # Создание регулярной сетки в координатах R, Z
     R_min, R_max = min(R_phi) - 1, max(R_phi) + 1
     Z_min, Z_max = min(Z_phi) - 1, max(Z_phi) + 1
-    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 10),
-                                 np.linspace(Z_min, Z_max, 10))
+    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 300),
+                                 np.linspace(Z_min, Z_max, 300))
 
     # Проверка точек сетки на принадлежность контуру
     grid_points = np.vstack((grid_R.ravel(), grid_Z.ravel())).T
@@ -147,23 +84,27 @@ if __name__ == "__main__":
         Z_inside_3D.append(z)
     points_inside = np.vstack((X_inside, Y_inside, Z_inside_3D)).T
 
-    # Расчет значений J_0 внутри контура
+
     print(len(points_inside))
-    J_0_values = J_0_calculate(points_inside)
-
-    # Преобразование J_0 в формат для сетки
-    J_0_grid = np.full(grid_R.shape, np.nan)
-    J_0_grid[mask] = J_0_values
-
-    # Построение графика
+    B_array, B_vec_array, S_array, B_max_array = MagField(points_inside)
+     # Построение графика
     plt.figure(figsize=(10, 8))
 
-    # Линии уровня для J_0
-    contour = plt.contour(grid_R, grid_Z, J_0_grid, levels=200, cmap="Blues")#, linewidths = 1)  # Контуры J_0
-    plt.clabel(contour, inline=True, fontsize=6)  # Добавление подписей к линиям уровня
+# Преобразуем S_array в numpy-массив
+    S_array = np.array(S_array)
+    colors = np.where(S_array <= 1, "blue", "yellow")  # Синий для S < 1, красный для S >= 1
+
 
     # Добавление контура
     plt.plot(R_phi, Z_phi, color="blue", label="Contour", linewidth=2)
+# Отображаем только те точки, у которых S < 1, с цветовой картой
+    plt.scatter(R_inside, Z_inside, c=colors, 
+            cmap='coolwarm', marker='o', alpha=0.75)
+
+# Добавляем цветовую шкалу
+    plt.colorbar(label="S value")
+
+
 
 # Подписи и легенда
     plt.xlabel("R")
@@ -174,4 +115,4 @@ if __name__ == "__main__":
 
 # Отображение графика
     plt.show()
-
+ 

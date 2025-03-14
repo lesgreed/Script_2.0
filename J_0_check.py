@@ -8,6 +8,8 @@ import os
 import J_0_test.mconf.mconf as mconf
 from scipy.integrate import solve_ivp
 from scipy.integrate import cumulative_trapezoid as cumtrapz
+from tqdm import tqdm
+
 
 def transform(R, Z, phi):
     x = R   # Use R directly for x-axis
@@ -19,6 +21,7 @@ def inverse_transform(R, Z, Phi):
     phi_radian = np.radians(Phi)
     x = R * np.cos(phi_radian)
     y = R * np.sin(phi_radian)
+    z = Z
     return x, y, z
 
 
@@ -72,61 +75,50 @@ def J_0_calculate(points):
             'accuracy': 1e-10,  
             'truncation': 1e-10  }
 
-        eq = mconf.Mconf_equilibrium('w7x-sc1_ecrh_beta=0.02.bc', mconf_config=mconf_config)
-
+        eq = mconf.Mconf_equilibrium('w7x-sc1_ecrh_beta=0.04.bc', mconf_config=mconf_config)
         J_0_all = np.zeros(len(points))  
+        for i, point in tqdm(enumerate(points), total=len(points)):
+         s0, vecB = eq.get_B(point)
+         B_value = np.linalg.norm(vecB)
+         B_max_p = eq.get_Bmax(s0)
+         B_max = E/mu
+         print("s0: ",s0)
+         if B_max<B_max_p and B_max>B_value and s0<1+1e-4:
+          #if B_max>
 
-        for i, point in enumerate(points):
-
-            try:
-                s0, vecB = eq.get_B(point)
-                print(point)
-                print(s0)
-                if s0<=1:
-
-
-                 L = 200  
-                 N = 3000  
-
+            try:                   
+                 L = 100  
+                 N = 2000  
                  rhs_B = lambda l, y: eq.get_B(y)[1]/ np.linalg.norm(eq.get_B(y)[1])
                  rhs_B_backward = lambda l, y: -eq.get_B(y)[1]/ np.linalg.norm(eq.get_B(y)[1])
-
 
                  forward_sol = solve_ivp(rhs_B, [0, L], point,method='RK45', max_step=L / N,atol=1e-6, dense_output=True)
                  forward_s, forward_B = eq.get_s_B_T(forward_sol.y[0],forward_sol.y[1], forward_sol.y[2])
                  forward_magB = np.linalg.norm(forward_B, axis=1)
                  forward_path = np.zeros(forward_sol.y.shape[1])
                  forward_path = np.cumsum(np.sqrt(np.sum(np.diff(forward_sol.y,axis=-1)**2, axis=0)))
-
+                 forward_path = np.insert(forward_path, 0, 0)                   
 
                  backward_sol = solve_ivp(rhs_B_backward, [0, L], point,method='RK45', max_step=L / N, atol=1e-6, dense_output=True)
                  backward_s, backward_B = eq.get_s_B_T(backward_sol.y[0],backward_sol.y[1], backward_sol.y[2])
                  backward_magB = np.linalg.norm(backward_B, axis=1)
                  backward_path = np.zeros(backward_sol.y.shape[1])
                  backward_path = np.cumsum(np.sqrt(np.sum(np.diff(backward_sol.y,axis=-1)**2, axis=0)))
-
-                 B_max = E / mu
-
-
-
+                 backward_path = np.insert(backward_path, 0, 0)  
 
                  forward_mask = forward_magB <= B_max
                  forward_idx_limit = np.argmax(~forward_mask) if np.any(~forward_mask) else len(forward_magB)
                  forward_magB_limited = forward_magB[:forward_idx_limit]
                  forward_path_limited = forward_path[:forward_idx_limit]
+                 print("forward_idx_limit", forward_idx_limit)
                  forward_integrand = np.sqrt(2 * mu* (B_max - forward_magB_limited))
-
 
                  backward_mask = backward_magB <= B_max
                  backward_idx_limit = np.argmax(~backward_mask) if np.any(~backward_mask) else len(backward_magB)
                  backward_magB_limited = backward_magB[:backward_idx_limit]
                  backward_path_limited = backward_path[:backward_idx_limit]
+                 print("backward_idx_limit", backward_idx_limit)
                  backward_integrand = np.sqrt(2 * mu* (B_max - backward_magB_limited))
-
-
-
-
-
 
                  complete_path = np.concatenate([
                  backward_path_limited[::-1],  
@@ -135,28 +127,19 @@ def J_0_calculate(points):
                  backward_path_limited         
                  ])
 
-
-
-
                  complete_integrand = np.concatenate([
                  backward_integrand[::-1],    
                  forward_integrand,           
                  forward_integrand[::-1],     
                  backward_integrand          
                  ])
-
-
                  J_0 = trapezoidal_integral(complete_integrand, complete_path)
-
                  J_0_all[i] = J_0
-                 print(J_0)
-                else:
-                    J_0_all[i] = 0
-
             except Exception as e:
                 J_0_all[i] = 0
-
-            print(f"Point{i}: J_0 = {J_0_all[i]}")
+         else:
+            J_0_all[i] = 0
+         print(f"Point{i}: J_0 = {J_0_all[i]}")
     finally:
         os.chdir(previous_directory)
     return J_0_all
@@ -171,7 +154,7 @@ def MagField(points):
                 'B0_angle': 0.0,
                 'accuracy': 1e-8, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-8} #trancation of mn harmonics
-      eq = mconf.Mconf_equilibrium('w7x-sc1_ecrh_beta=0.02.bc',mconf_config=mconf_config)
+      eq = mconf.Mconf_equilibrium('w7x-sc1_ecrh_beta=0.04.bc',mconf_config=mconf_config)
       B_array, B_vec_array, S_array, B_max_array= [], [], [], []
       for i in range(len(points)):
          S, vecB = eq.get_B(points[i])
@@ -187,13 +170,13 @@ def MagField(points):
 
 if __name__ == "__main__":
     # Константы для расчета
-    E = 80 
-    mu = 32
+    E = 75
+    mu = 30
     print(f"E/mu = {E / mu}")
 
     # Загрузка данных
     Phi, R_phi, Z_phi = FuD.read_data()
-    Phi, R_phi, Z_phi = Phi[20], R_phi[20], Z_phi[20]
+    Phi, R_phi, Z_phi = Phi[25], R_phi[25], Z_phi[25]
 
     # Преобразование точек контура в двумерный массив для построения
     contour = np.array(transform(R_phi, Z_phi, Phi)).T
@@ -202,8 +185,8 @@ if __name__ == "__main__":
     # Создание регулярной сетки в координатах R, Z
     R_min, R_max = min(R_phi) - 1, max(R_phi) + 1
     Z_min, Z_max = min(Z_phi) - 1, max(Z_phi) + 1
-    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 10),
-                                 np.linspace(Z_min, Z_max, 10))
+    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 50),
+                                 np.linspace(Z_min, Z_max, 50))
 
     # Проверка точек сетки на принадлежность контуру
     grid_points = np.vstack((grid_R.ravel(), grid_Z.ravel())).T
@@ -217,7 +200,6 @@ if __name__ == "__main__":
     X_inside, Y_inside, Z_inside_3D = [], [], []
     for r, z in zip(R_inside, Z_inside):
         x, y, z = inverse_transform(r, z, Phi)
-        x, y, z = x, y, z
         X_inside.append(x)
         Y_inside.append(y)
         Z_inside_3D.append(z)
@@ -226,18 +208,16 @@ if __name__ == "__main__":
     # Расчет значений J_0 внутри контура
     print(len(points_inside))
     J_0_values = J_0_calculate(points_inside)
-
-    # Преобразование J_0 в формат для сетки
     J_0_grid = np.full(grid_R.shape, np.nan)
     J_0_grid[mask] = J_0_values
 
     # Построение графика
     plt.figure(figsize=(10, 8))
 
-    # Линии уровня для J_0
-    contour = plt.contour(grid_R, grid_Z, J_0_grid, levels=200, cmap="Blues")#, linewidths = 1)  # Контуры J_0
-    plt.clabel(contour, inline=True, fontsize=6)  # Добавление подписей к линиям уровня
+    # Линии уровня для J_0, пропуская NaN
+    contour = plt.contour(grid_R, grid_Z, J_0_grid, levels=50, cmap="Blues")
 
+    plt.clabel(contour, inline=True, fontsize=6)  # Добавление подписей к линиям уровня
     # Добавление контура
     plt.plot(R_phi, Z_phi, color="blue", label="Contour", linewidth=2)
 

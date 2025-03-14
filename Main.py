@@ -1,35 +1,69 @@
+#files 
+import Surface_rays as geo
+import Surface_data as FuD
+import NBI_Ports_data_input as Cout
+import J_0_test.mconf.mconf as mconf
+import Weight_Fuction.WF_FIDA as WF
+import subprocess
+import sys
+
+
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+libraries = [ "tkinter", "matplotlib","customtkinter", "numpy","scipy", "concurrent.futures","tqdm", "json", "jsonpickle"]
+for library in libraries:
+    try:
+        globals()[library] = __import__(library)  
+    except ImportError:
+        print(f"Loading....: {library}")
+        install(library)  
+
+
+#library 
 import tkinter as tk
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import customtkinter as ctk
 import numpy as np
-import Surface_rays as geo
-import Surface_data as FuD
-import NBI_Ports_data_input as Cout
-import J_0_test.mconf.mconf as mconf
 import os 
-import Weight_Fuction.WF_FIDA as WF
 from scipy.integrate import solve_ivp
-from scipy.integrate import cumulative_trapezoid as cumtrapz
+from matplotlib import cm
+from concurrent.futures import ProcessPoolExecutor
+from tqdm import tqdm
+import json
+from tkinter import filedialog
+import jsonpickle
+from concurrent.futures import ThreadPoolExecutor
 
+#====================================================================================================App_interface================================================================================================
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         # configure window
         self.title("W7-X cheking")
-        self.geometry(f"{1520}x{900}")
+        self.geometry(f"{1600}x{900}")
         self.data_instance = Data()
         self.Bget = calculus()
 
         # Global variable for slider value
         self.angle = int(90)
-        self.oldangle = int(90)
-        self.scale = 10  # New global variable for the second slider
-        self.oldscale = 10
-        self.delta_s = 0.1
-        self.delta_J_0 = 0.01 
+        self.scale = 10  
+        self.delta_s = 0.05
+        self.delta_J_0 = 0.05 
+        self.current_graph = None
+        self.all_results = []
+        self.data_wf = []
+        self.Name_Ports = ['2_1_AEA', '2_1_AEM','2_1_AET', '2_1_AEA', '2_1_AEM','2_1_AET']
+        self.Name_NBI = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
+        self.results_folder = "Results"  
+        self.conf_folder = "J_0_test"
+        self.conf = 'w7x-sc1_ecrh_beta=0.02.bc'
+        self.diagnostics = ['FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA']
+
+  
 
         # Section 1: Sidebar
         self.create_sidebar()
@@ -42,13 +76,14 @@ class App(ctk.CTk):
         self.appearance_mode_optionemenu.set("Dark")
         self.scaling_optionemenu.set("100%")
         self.update_port_options(self.nbi_options[0])
+    
 
-        self.current_graph = None
-        self.all_results = []
-        self.data_wf = []
-        self.Name_Ports = ['2_1_AEA', '2_1_AEA', '2_1_AEM', '2_1_AEM', '2_1_AET', '2_1_AET'] 
-        self.Name_NBI = ['NBI_7', 'NBI_8', 'NBI_7', 'NBI_8', 'NBI_7', 'NBI_8' ]
 
+
+
+
+
+    #------------------------------------------------------Interface---------------------------------------------------------------------------------------
     def create_sidebar(self):
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
@@ -74,34 +109,43 @@ class App(ctk.CTk):
                                                                command=self.change_scaling_event)
         self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
 
-
-
         self.show_old_button_label= ctk.CTkLabel(self.sidebar_frame, text="Raw data:", anchor="w")    
         self.show_old_button_label.grid(row=4, column=0, padx=10, pady=(10,0))   
         self.show_old_button = ctk.CTkButton(self.sidebar_frame, text="Update data", command=lambda: self.pre_calculate())
         self.show_old_button.grid(row=4, column=0, padx=10, pady=(70,0))
-    
 
-    def pre_calculate(self):
-        if len(self.all_results) ==0 or self.scale != self.oldscale:
-         Result_array = self.data_instance.data_already_input(self.scale)  
-         self.all_results = Result_array
-         self.data_wf = []
-        else:
-            self.all_results = [row[:6] for row in self.all_results]
-
-        time = datetime.now().strftime("%H:%M:%S")
-        self.textbox.insert("end", f"\n\n [{time}]: Old data ready \n\n ")
-        #print(self.all_results)
-        
     def create_additional_widgets(self):
         # create textbox
-        self.textbox = ctk.CTkTextbox(self, width=30)  
+        self.textbox = ctk.CTkTextbox(self, width=30, font=("Arial", 14))  
         self.textbox.grid(row=0, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        welcome_message = (
+            "Welcome to the program!\n\n"
+            "Explanation of the naming convention:\n"
+            "For '21AEM.S8':\n"
+            "  - 21:  \t   Module 2, Submodule 1\n"
+            "  - AEM: \t   Type of the port\n"
+            "  - S:   \t   NBI (FIDA) \n"
+            "  - C:   \t   Gyrotron (CTS) \n"
+            "  - 8:   \t   NBI or C number\n\n"
+            "Matrix Size setting:\n"
+           "This adjusts the size of each matrix.\n\n"
+        )
+
+        self.textbox.insert("end", welcome_message, "\n\n")
+
+
+
+
+
 
         # Button to show graph
-        self.show_graph_button = ctk.CTkButton(self, text="Add Port", command=lambda: self.dummy_function())
+        self.show_graph_button = ctk.CTkButton(self, text="Add Port and build", command=lambda: self.dummy_function())
         self.show_graph_button.grid(row=1, column=1, padx=(20, 0), pady=(10, 0), sticky="w")
+
+                # Button to show graph
+        self.show_graph_button = ctk.CTkButton(self, text="Build", command=lambda: self.generate_and_show_graph())
+        self.show_graph_button.grid(row=1, column=1, padx=(200, 0), pady=(10, 0), sticky="w")
+
 
 
         # create tabview with two sections
@@ -109,21 +153,21 @@ class App(ctk.CTk):
         self.tabview.grid(row=0, column=2, padx=(20, 0), pady=(20, 0), sticky="nsew")
 
         # Section 1: "PORTS and NBI"
-        self.tabview.add("PORTS and NBI")
-        self.tabview.tab("PORTS and NBI").grid_columnconfigure(0, weight=1)
+        self.tabview.add("Tools")
+        self.tabview.tab("Tools").grid_columnconfigure(0, weight=1)
 
         # First CTkOptionMenu for NBI selection
         self.nbi_options = self.generate_nbi_options()
-        self.nbi_optionmenu_label = ctk.CTkLabel(self.tabview.tab("PORTS and NBI"), text="Select NBI or Gyrotron Launcher", anchor="w")
+        self.nbi_optionmenu_label = ctk.CTkLabel(self.tabview.tab("Tools"), text="Select NBI or Gyrotron Launcher", anchor="w")
         self.nbi_optionmenu_label.grid(row=0, column=0, padx=20, pady=(20, 0), sticky="w")
-        self.nbi_optionmenu = ctk.CTkOptionMenu(self.tabview.tab("PORTS and NBI"), values=self.nbi_options, command=self.update_port_options)
+        self.nbi_optionmenu = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.nbi_options, command=self.update_port_options)
         self.nbi_optionmenu.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="w")
 
         # Second CTkOptionMenu for Port selection (based on NBI selection)
         self.port_options = []
-        self.port_optionmenu_label = ctk.CTkLabel(self.tabview.tab("PORTS and NBI"), text="Select Port", anchor="w")
+        self.port_optionmenu_label = ctk.CTkLabel(self.tabview.tab("Tools"), text="Select Port", anchor="w")
         self.port_optionmenu_label.grid(row=2, column=0, padx=20, pady=(10, 0), sticky="w")
-        self.port_optionmenu = ctk.CTkOptionMenu(self.tabview.tab("PORTS and NBI"), values=self.port_options)
+        self.port_optionmenu = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.port_options)
         self.port_optionmenu.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="w")
 
         # Section 2: "Setting"
@@ -131,7 +175,7 @@ class App(ctk.CTk):
         self.tabview.tab("Setting").grid_columnconfigure(0, weight=1)
 
         # Slider in "Setting" section
-        self.slider_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="Angle Value:", anchor="w")
+        self.slider_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="Viewing Angle:", anchor="w")
         self.slider_label.grid(row=0, column=0, padx=20, pady=(10, 0), sticky="w")
 
         self.slider = ctk.CTkSlider(self.tabview.tab("Setting"), from_=30, to=90, command=self.slider_event)
@@ -143,7 +187,7 @@ class App(ctk.CTk):
         self.value_label.grid(row=1, column=1, padx=(10, 20), pady=(10, 20), sticky="w")
 
         # Second slider for values 10 to 100 without intermediate values
-        self.second_slider_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="Scale Value:", anchor="w")
+        self.second_slider_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="Matrix Size:", anchor="w")
         self.second_slider_label.grid(row=2, column=0, padx=20, pady=(10, 0), sticky="w")
 
         self.second_slider = ctk.CTkSlider(self.tabview.tab("Setting"), from_=1, to=10, command=self.second_slider_event)
@@ -161,41 +205,199 @@ class App(ctk.CTk):
 
         # Bind the entry to update value automatically when changed
         self.delta_s_entry.bind("<Return>", self.update_delta_s)
+
+
+        # Label for Delta J with Greek symbol
+        self.delta_J_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="ΔJ0:", anchor="w")
+        self.delta_J_label.grid(row=4, column=1, padx=20, pady=(10, 0), sticky="w")
+
+        # Entry for Delta J value
+        self.delta_J_entry = ctk.CTkEntry(self.tabview.tab("Setting"), width=100)
+        self.delta_J_entry.insert(0, str(self.delta_J_0))  # Set initial value
+        self.delta_J_entry.grid(row=5, column=1, padx=20, pady=(10, 20), sticky="w")
+
+        # Bind the entry to update value automatically when changed
+        self.delta_J_entry.bind("<Return>", self.update_delta_J)
+
         # Label to display the current value of the second slider
         self.second_value_label = ctk.CTkLabel(self.tabview.tab("Setting"), text=str(self.scale))
         self.second_value_label.grid(row=3, column=1, padx=(10, 20), pady=(10, 20), sticky="w")
+        
+        self.file_list_label = ctk.CTkLabel(self.tabview.tab("Tools"), text="Configuration", anchor="w")
+        self.file_list_label.grid(row=4, column=0, padx=20, pady=(10, 0), sticky="w")
+        
+        self.file_list = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.get_result_files_conf(), command=self.select_file_conf)
+        self.file_list.grid(row=5, column=0, padx=20, pady=(0, 20), sticky="w")
+
+
+        self.file_list_label = ctk.CTkLabel(self.tabview.tab("Tools"), text="Results", anchor="w")
+        self.file_list_label.grid(row=6, column=0, padx=20, pady=(10, 0), sticky="w")
+        
+        self.file_list = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.get_result_files(), command=self.select_file)
+        self.file_list.grid(row=7, column=0, padx=20, pady=(0, 20), sticky="w")
+
+
+        self.save_button = ctk.CTkButton(self.tabview.tab("Tools"), text="Save data", command=self.save_results)
+        self.save_button.grid(row=8, column=0, padx=20, pady=5, sticky="w")
+        
+        self.load_button = ctk.CTkButton(self.tabview.tab("Tools"), text="Load data", command=self.load_results)
+        self.load_button.grid(row=9, column=0, padx=20, pady=5, sticky="w")
 
         # Canvas for displaying the graph
         self.graph_canvas = ctk.CTkCanvas(self, width=800, height=600, bg="white")
         self.graph_canvas.grid(row=0, column=3, padx=(20, 0), pady=(20, 0), sticky="nsew")
+    #--------------------------------------------------------------------------------------------------------------------------------------------- 
+
+
+
+
+
+
+
+    #-------------------------------------------------------------Save data-------------------------------------------------------------------    
+    def save_results(self):
+        file_name = f"Results_{self.angle}_{self.scale}_{self.conf[:-3]}.json"  
+        file_path = os.path.join(self.results_folder, file_name)
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        try:
+            data_to_save = {
+            'scale': self.scale,
+            'angle': self.angle,
+            'results': self.all_results,
+            'Ports': self.Name_Ports,
+            'NBI':self.Name_NBI,
+            'conf': self.conf
+        }
+            with open(file_path, 'w') as f:
+                f.write(jsonpickle.dumps(data_to_save))
+
+            self.textbox.insert("end", f"[{timestamp}]: File was saved: {file_path}\n")
+            self.file_list.configure(values=self.get_result_files())  
+        except Exception as e:
+            self.textbox.insert("end", f"[{timestamp}]: Error during saving file: {e}\n")
+            print(f"Error during saving file: {e}")
+
+        
+    def load_results(self):
+        file_path = filedialog.askopenfilename(initialdir=self.results_folder, filetypes=[("JSON files", "*.json")])
+        if file_path:
+            self.load_from_file(file_path)
     
-    def second_slider_event(self, value):
+    def select_file(self, file_name):
+        file_path = os.path.join(self.results_folder, file_name)
+        self.load_from_file(file_path)
+    
+    def load_from_file(self, file_path):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        try:
+            with open(file_path, 'r') as f:
+                #content = f.read()
+                #print(len(content))
+                data = jsonpickle.loads(f.read())
+            self.scale = data['scale']
+            self.angle = data['angle']
+            self.all_results = data['results']
+            self.Name_Ports = data['Ports']
+            self.Name_NBI = data['NBI']
+            self.conf = data['conf']
+            self.data_wf = self.all_results[10][0]
+            new_names = self.port_name()
+            self.textbox.insert("end", f"\n[{timestamp}]: Loaded Data:\nMatrix size: {self.scale}\nViewing Angle: {self.angle}\nConfiguration: {self.conf} \nPorts: {', '.join(new_names)} \n  ")#Diagnostics: {', '.join(self.diagnostics)}\n
+        except Exception as e:
+            self.textbox.insert("end", f"\n[{timestamp}]: Error during loading file: {e}\n")
+            
+
+    def port_name(self):
+        new_names = []
+        for i in range(len(self.Name_Ports)):
+            selected_nbi = self.Name_NBI[i]
+            selected_port = self.Name_Ports[i]
+            if selected_nbi[0] == 'N':
+                name = 'S'
+            else:
+                name = 'C'
+            new_name = f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}'
+            new_names.append(new_name)
+        return new_names
+    
+    def get_result_files(self):
+        return [f for f in os.listdir(self.results_folder) if f.endswith(".json")]
+    
+    def get_result_files_conf(self):
+        files = [f for f in os.listdir(self.conf_folder) if f.endswith(".bc")]
+        if self.conf in files:
+         files.remove(self.conf)
+         files.insert(0, self.conf)
+        return files
+    
+    def select_file_conf(self, file_name):
+        self.conf = file_name
+        print(self.conf)
+    #------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+     
+    #-----------------------------------------------Pre_calculate------------------------------------------------------------------------------
+    def pre_calculate(self):
+        if len(self.all_results) ==0:
+         Result_array = self.data_instance.data_already_input(self.scale,  self.Name_Ports,   self.Name_NBI, self.angle, self.conf)
+         self.all_results = Result_array
+         self.data_wf = self.all_results[10][0]
+        else:
+            self.all_results = [row[:6] for row in self.all_results]
+
+        time = datetime.now().strftime("%H:%M:%S")
+        self.textbox.insert("end", f"\n [{time}]: Old data ready \n\n ")
+    #---------------------------------------------------------------------------------------------------------------------------------------------
+        
+    
+
+
+        
+    #--------------------------------------------------------------Setting functions---------------------------------------------------------------
+    def second_slider_event(self, value): 
         self.scale = int(value) * 10  
         self.second_value_label.configure(text=str(self.scale))
 
 
-    def slider_event(self, value):
+    def slider_event(self, value):  #about angle 
         self.angle = int(value)
         self.value_label.configure(text=str(self.angle))
-    # Method to apply the new Delta s value
 
-    def update_delta_s(self, event):  # Добавлено event=None
+
+    def update_delta_s(self, event):
+        timestamp = datetime.now().strftime("%H:%M:%S")
         try:
             new_value = float(self.delta_s_entry.get())
             self.delta_s = new_value
             print(f"Delta s updated to: {self.delta_s}")
-            # Вставка сообщения в текстовое поле
-            self.textbox.insert("end", f"Δs updated to: {self.delta_s}\n\n")
+
+            self.textbox.insert("end", f"\n[{timestamp}]: Δs updated to: {self.delta_s}\n")
         except ValueError:
-            self.textbox.insert("end", "Invalid input. Please enter a numerical value.\n\n")
+            self.textbox.insert("end", f"\n[{timestamp}]: Invalid input. Please enter a numerical value.\n")
+
+    def update_delta_J(self, event):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        try:
+            new_value = float(self.delta_J_entry.get())
+            self.delta_J_0 = new_value
+            print(f"Delta s updated to: {self.delta_J_0}")
 
 
+            self.textbox.insert("end", f"\n[{timestamp}]: ΔJ0 updated to: {self.delta_J_0}\n")
+        except ValueError:
+            self.textbox.insert("end", f"\n[{timestamp}]: Invalid input. Please enter a numerical value.\n")
+    #-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
+
+    #------------------------------------------------------------Tools function----------------------------------------------------------------------------
     def generate_port_options(self, selected_nbi: str):
         nbi_index = int(selected_nbi.split("_")[1])
         if selected_nbi.startswith("CTS"):
          nbi_index = nbi_index+8
-        
         nbi_index = nbi_index-1
         valid_indices, extreme_points_1, extreme_points_2, valid_port_names = self.data_instance.port_for_nbi(nbi_index, int(self.angle), self.scale)
         Ports_for_NBI_Index = valid_port_names
@@ -203,83 +405,51 @@ class App(ctk.CTk):
 
     def update_port_options(self, selected_nbi: str):
      self.port_options = self.generate_port_options(selected_nbi)
-     self.port_optionmenu.configure(values=self.port_options)  # Оновлення варіантів
-    # Set the initial value for Select Port (if the list is not empty)
+     self.port_optionmenu.configure(values=self.port_options)  
      if self.port_options:
             self.port_optionmenu.set(self.port_options[0])
-    
 
+    def generate_nbi_options(self):
+      return [f"NBI_{i}" if i <= 8 else f"CTS_{i-8}" for i in range(1, 12)]
+    #-----------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+
+
+
+    #------------------------------------------------------FriendlyUsefull-----------------------------------------------------------------------------------
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
 
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def generate_nbi_options(self):
-      return [f"NBI_{i}" if i <= 8 else f"CTS_{i-8}" for i in range(1, 12)]
+    
 
+
+
+    #---------------------------------------Add new matrxi to grid ----------------------------------------------------
     def create_result_array_for_port(self, selected_nbi, selected_port):
         data = self.data_instance.data_nbi_ports(selected_nbi, selected_port, self.angle, self.scale)
 
         for i in range(len(data)):
             self.all_results[i].append(data[i])
-        #print(self.all_results[0])
-        result_for_i = []
-        if self.data_wf == []:
-         for i in range(len(self.all_results[0])):
-            index_nbi = int(self.all_results[0][i].split('_')[-1])-1
-            result_for_j = []
-            for j in range(len(self.all_results[3][i])):
-             if index_nbi<8:
-                x_ev = np.linspace(10, 100, 100)
-                y_ev = np.linspace(-100, 100, 100)/2.5
-                result = WF.weight_Function(self.all_results[4][i][j], self.all_results[3][i][j], x_ev, y_ev)
-                result_for_j.append(result)
 
-             if index_nbi>=8:
-                x_ev = np.linspace(10, 100, 100)
-                y_ev = np.linspace(-100, 100, 100)/2.5
-                result = WF.CTS_wf(self.all_results[6][i][j], self.all_results[3][i][j], x_ev, y_ev)  
-                result_for_j.append(result)
-            result_for_i.append(result_for_j)   
-         self.data_wf = result_for_i
-        else:
-           index_nbi = int(data[0].split('_')[-1])-1
-           result_for_j = []
-           for j in range(len(data[3])):
-             if index_nbi<8:
-                x_ev = np.linspace(10, 100, 100)
-                y_ev = np.linspace(-100, 100, 100)/2.5
-                result = WF.weight_Function(data[4][j], data[3][j], x_ev, y_ev)
-                result_for_j.append(result)
-
-             if index_nbi>=8:
-                x_ev = np.linspace(10, 100, 100)
-                y_ev = np.linspace(-100, 100, 100)/2.5
-                result = WF.CTS_wf(data[6][j], data[3][j], x_ev, y_ev)  
-                result_for_j.append(result)
-           self.data_wf.append(result_for_j)
+        reuslt = self.data_instance.process_data_for_point(len(self.all_results[0])-1, self.all_results, self.conf)
+        self.data_wf.append(reuslt)
+    #------------------------------------------------------------------------------------------------------------------
 
 
-        
 
 
+
+
+    #---------------------------------------------------------------------Graph----------------------------------------------------
     def generate_and_show_graph(self):
-        #User
-        selected_nbi = self.nbi_optionmenu.get()
-        selected_port = self.port_optionmenu.get()
-        
-        #Data
-        self.Name_NBI.append(selected_nbi)
-        self.Name_Ports.append(selected_port)
-        self.create_result_array_for_port(selected_nbi, selected_port)
-    
-        # Clear previous graph
         if self.current_graph:
             self.current_graph.get_tk_widget().destroy()
 
-        # Draw the new graph on the canvas
         self.draw_graph_on_canvas(self.data_wf)
 
     def dummy_function(self):
@@ -291,9 +461,13 @@ class App(ctk.CTk):
         timestamp = datetime.now().strftime("%H:%M:%S")
           
         #Message  
-        message = f"[{timestamp}]: Selected Port:    {selected_port}\nSelected:     {selected_nbi}\n\n"
+        message = f"\n[{timestamp}]: Selected Port:    {selected_port}\nSelected:     {selected_nbi}\n"
         self.textbox.insert("end", message)
 
+        #Data
+        self.Name_NBI.append(selected_nbi)
+        self.Name_Ports.append(selected_port)
+        self.create_result_array_for_port(selected_nbi, selected_port)
 
         self.generate_and_show_graph()
         
@@ -309,14 +483,17 @@ class App(ctk.CTk):
         for i in range(num_arrays):
             for j in range(num_arrays):
                  MATRIX = self.sum(Result_for_NBI_Port[i], Result_for_NBI_Port[j], i, j)
-                 min_value = np.min(MATRIX)
+                 MATRIX= np.transpose(MATRIX)
+                 filtered_values = MATRIX[MATRIX != -np.inf]
+                 min_value = np.min(filtered_values) if filtered_values.size > 0 else -9
+                 #min_value = np.min(MATRIX)
                  color = np.append(color, min_value)
                  Matr[i, j]  = MATRIX
         for i in range(num_arrays):
             for j in range(num_arrays):
 
                 One_Matr = Matr[i, j] 
-                im = axs[i, j].imshow(One_Matr, cmap='plasma', origin='upper', aspect='auto', vmin=np.min(color), vmax=1.0)
+                im = axs[i, j].imshow(One_Matr, cmap='jet', origin='upper', aspect='auto', vmin=min_value, vmax=np.max(MATRIX))
 
                 axs[i, j].set_xticks([])
                 axs[i, j].set_yticks([])
@@ -345,10 +522,6 @@ class App(ctk.CTk):
             axs[num_arrays-1, i].set_xlabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
             axs[i, 0].set_ylabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
 
-
-
-        
-
         #plt.title('FIDA')
         plt.close('all')
 
@@ -359,24 +532,20 @@ class App(ctk.CTk):
 
         # Update the current graph reference
         self.current_graph = canvas
-        
-        
-    
-            
 
 
     def sum(self, array_1, array_2, first_nbi_index, second_nbi_index):
      MATRIX = np.zeros((len(array_1), len(array_2)))
 
      
-     x_ev = np.linspace(10, 100, 100)
-     y_ev = np.linspace(-100, 100, 100) / 2.5
+     x_ev = np.linspace(10, 100, 300)
+     y_ev = np.linspace(-100, 100, 300) / 2.5
      x_ev, y_ev = np.meshgrid(x_ev, y_ev)
 
-     
-     ratio = x_ev / y_ev
+     ratio = np.abs(x_ev / y_ev)
 
-     # Значения B_max, s_1 и s_2 для массивов
+     B_value_1 = self.all_results[3][first_nbi_index]
+     B_value_2 = self.all_results[3][second_nbi_index]
      B_max_array_1 = self.all_results[8][first_nbi_index]
      B_max_array_2 = self.all_results[8][second_nbi_index]
      s_1_array = self.all_results[7][first_nbi_index]
@@ -394,6 +563,8 @@ class App(ctk.CTk):
             mask_i = (ratio > B_max_i)
             mask_j = (ratio > B_max_j)
 
+            mask_i_val = (ratio> B_value_1[i])
+            mask_j_val = (ratio> B_value_2[j])
             
             x_idx = i % x_ev.shape[0]  
             y_idx = j % y_ev.shape[1]  
@@ -401,72 +572,49 @@ class App(ctk.CTk):
             J_0_i = J_0_array_1[x_idx, y_idx]  
             J_0_j = J_0_array_2[x_idx, y_idx]  
 
-           
+            #free particles 
             both_above_B_mask = mask_i & mask_j
 
-           
-            both_below_B_mask = np.logical_not(mask_i) & np.logical_not(mask_j)
+            #not free
+            both_below_B_mask = np.logical_not(mask_i) & np.logical_not(mask_j) & mask_i_val & mask_j_val
 
-           
-            cross_check_mask = np.logical_not((mask_i & np.logical_not(mask_j)) | (np.logical_not(mask_i) & mask_j))
-            
+            #or or 
+            cross_check_mask = (mask_i & np.logical_not(mask_j)) | (np.logical_not(mask_i) & mask_j)
 
-            # Избегаем деления на ноль: создаем маску ненулевых значений
-            nonzero_mask = (np.abs(J_0_j) > 1) & (np.abs(J_0_i) > 1)
+            #==================================free=================================================
+            ratio_mask_s = (np.abs(np.abs(s_1_i / s_2_j)-1) <=  self.delta_s)
+            equal_s_mask = ratio_mask_s 
+            #==================================NOT free=================================================
+            J_0_check_mask =  (np.abs(J_0_i - J_0_j) < self.delta_J_0 * np.maximum(np.abs(J_0_i), np.abs(J_0_j)))
+            #==================================forbidden======================================
+            mask_no_accept =  np.logical_not(mask_i_val) | np.logical_not(mask_j_val) 
 
-            # Вычисляем маску, сравнивая J_0_i и J_0_j
-            ratio_mask = np.abs(np.abs(J_0_i / J_0_j)-1) <=  (self.delta_J_0)
-            diff_mask = np.abs(J_0_i - J_0_j) <= self.delta_J_0
-
-            # Применяем правильную маску в зависимости от наличия нуля в J_0_j
-            both_below_B_and_J_0_check_mask = both_below_B_mask & np.where(nonzero_mask, ratio_mask, diff_mask)
-            
-            #both_below_B_and_J_0_check_mask = both_below_B_mask & (np.abs(J_0_i -J_0_j) <= self.delta_J_0)
-
-            
-            # Избегаем деления на ноль: создаем маску ненулевых значений
-            nonzero_mask_s = (np.abs(s_1_i) > 1e10) & (np.abs(s_2_j) > 1e10)
-
-            # Вычисляем маску, сравнивая J_0_i и J_0_j
-            ratio_mask_s = np.abs(np.abs(s_1_i / s_2_j)-1) <=  0.01
-            diff_mask_s = np.abs(s_1_i - s_2_j) <= self.delta_s
-
-
-
-            equal_s_mask = np.where(nonzero_mask_s, ratio_mask_s, diff_mask_s)
-
-           
-            mask_condition_1 = both_above_B_mask & np.logical_not(equal_s_mask)
-
-            
+            #free diff
+            mask_condition_1 = both_above_B_mask  & np.logical_not(equal_s_mask)
+            #free same
             mask_condition_2 = both_above_B_mask & equal_s_mask
-
-           
-            mask_condition_3 = both_below_B_mask
-
-            
-            mask_condition_4 = np.logical_not(cross_check_mask)
-
-            
-            mask_condition_5 = both_below_B_and_J_0_check_mask
-
-           
+            #or or 
+            mask_condition_4 = cross_check_mask
+            #not free same 
+            mask_condition_5 = both_below_B_mask & J_0_check_mask
+            #not free diff 
+            mask_condition_6 = both_below_B_mask & np.logical_not(J_0_check_mask)
+            #f
+            mask_condition_7 = mask_no_accept
+            #  
+            mask_condition_8 = (s_1_i > 1) | (s_2_j > 1)
+            #results
             product = array_1[i] * array_2[j]
-
+            #mask
             product[mask_condition_1] = 0
             product[mask_condition_4] = 0
-            product[mask_condition_5] = 0
+            product[mask_condition_6] = 0
+            product[mask_condition_7] = 0
+            product[mask_condition_8] = 0
 
-
-            MATRIX[i, j] = np.sum(product)
-            #print(MATRIX[i, j])
-
-
-
-
-
-     max_value = np.max(MATRIX)
-     MATRIX /= max_value
+            sum_product = np.sum(product)
+            element = np.log10(np.where(sum_product > 0, sum_product, 1e-9))
+            MATRIX[i, j] = np.where(element>-9, element, -np.inf)
 
      return MATRIX
 
@@ -474,6 +622,7 @@ class App(ctk.CTk):
 
 
 class Data:
+        #====================================================================DATA TYPE ====================================================================================================
         #data_B: [Name NBI; Name Port; Points on NBI; Mag field in this points; Angle between linesight and vec NBI; vec Mag field in points on NBI; angle between vec linesi and magfield]
         #data_B[0]: Name NBI
         #data_B[1]: Name Port
@@ -484,8 +633,12 @@ class Data:
         #data_B[6]: angle between vec linesi and magfield
         #data_B[7]: S
         #data_B[8]: B_max 
-        #data_B[9]: results
-        #data_B[10]: J_0
+        #data_B[9]: J_0
+        #data_B[10]: WF
+        #==================================================================================================================================================================================
+
+
+
     def __init__(self):
         self.R_x, self.R_y, self.R_z = FuD.all_point(FuD.read_data()[0])
         self.P_1, self.P_2, self.P_name = Cout.Ports()
@@ -493,7 +646,8 @@ class Data:
         self.Bget = calculus()
 
 
-        # Create 3D surface
+
+        # ===================================================================================================Create 3D surface=========================================================
         self.surface = geo.create_surface(self.R_x, self.R_y, self.R_z)
 
         # Get intersections for ports and NBI
@@ -506,77 +660,36 @@ class Data:
             valid_indices = geo.pre_NBI_and_PORTS(i, self.new_P_1, self.new_NBI_start, self.new_NBI_end, self.surface)
             # Store the valid port names
             self.valid_indx.append(valid_indices)
+        #============================================================================================================================================================================
 
     def port_for_nbi(self, NBI_index, angle, scale):
         P_1_for_NBI = self.new_P_1[:, self.valid_indx[NBI_index]]
         P_1_start_for_NBI = self.P_1[:, self.valid_indx[NBI_index]]
         Pname_for_NBI = [self.P_name[i] for i in self.valid_indx[NBI_index]]
-        #print(angle)
         valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
             P_1_start_for_NBI, NBI_index, P_1_for_NBI, self.new_NBI_start, self.new_NBI_end, self.surface, float(angle))
         valid_port_names = [Pname_for_NBI[i] for i in valid_indices]
-        #print(valid_port_names)
         return valid_indices, extreme_points_1, extreme_points_2, valid_port_names
+    
 
-    def data_already_input(self, scale):
-        Name_Ports = ['2_1_AEA', '2_1_AEM','2_1_AET'] 
-        Name_NBI = ['NBI_7','NBI_8']
-        Port_indices = [self.P_name.index(port) for port in Name_Ports if port in self.P_name]
-        NBI_indices = [6,7]
-        data = [[] for _ in range(6)]
-        for i in range(len(NBI_indices)):
-            NBI_index_i = NBI_indices[i]
-            P_1_for_NBI_i = self.new_P_1[:, Port_indices]
-            P_1_start_for_NBI = self.P_1[:, Port_indices]
-            valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
-            P_1_start_for_NBI, NBI_index_i, P_1_for_NBI_i, self.new_NBI_start, self.new_NBI_end, self.surface, float(90))
+    def data_already_input(self, scale, Name_Ports, Name_NBI, angle, config):
 
-            for j in range(3):
-             data[i*3+j] = (np.array(extreme_points_1[j], dtype=np.float64), np.array(extreme_points_2[j], dtype=np.float64))  # Добавляем к подмассив
+        data_B = [[] for _ in range(11)]
+        for i in range(len(Name_Ports)):
+           data_i = self.data_nbi_ports(Name_NBI[i], Name_Ports[i], angle, scale, config)
+           
+           for i in range(len(data_i)):
+               data_B[i].append(data_i[i])
+           print(data_B[0])
 
-
-        data_B = [[],[],[],[],[],[],[],[],[],[]]
-        for i in range(len(data)):
-              points, B_array, B_vec_array, S_array, B_max_array = self.Bget.gets(data[i][0], data[i][1], scale)
-              data_B[2].append(points)
-              #print(points)
-              data_B[3].append(B_array)
-              data_B[5].append(B_vec_array)
-              data_B[7].append(S_array)
-              data_B[8].append(B_max_array)
-        for i in range(len(data_B[2])):
-  
-            J_0_array = []
-            for j in range(len(data_B[2][i])):
-             J_0 = self.Bget.J_0_calculate(data_B[2][i][j])
-             J_0_array.append(J_0)
-             #print(J_0)
-            data_B[9].append(J_0_array)
-
-
-        data_B[0] = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
-        data_B[1] = ['2_1_AEA', '2_1_AEM','2_1_AET', '2_1_AEA', '2_1_AEM','2_1_AET']
-        for i in range(len(data_B[1])):
-            index = self.P_name.index(data_B[1][i])
-            point_P_2 = [self.new_P_1[0][index],self.new_P_1[1][index],self.new_P_1[2][index]]
-            point_P_1 = [self.P_1[0][index],self.P_1[1][index],self.P_1[2][index]]
-            angles=[]
-            angles_vec_B = []
-            for j in range(len(data_B[2][i])):
-                angle = geo.check_segment_angle(point_P_1, point_P_2, data_B[2][i][j]*100)
-                angles.append(angle)
-                
-                #angle between vec linesi and magfield
-                vector_AB = np.array(point_P_2) - np.array(point_P_1)  
-                angle_B = geo.check_angle_2_vec(vector_AB/100, data_B[5][i][j])
-                angles_vec_B.append(angle_B)
-                 
-            data_B[4].append(angles)
-            data_B[6].append(angles_vec_B)
+        WF_array = self.create_result_array_for_port_old(data_B)
+        data_B[10].append(WF_array)
 
         return data_B
     
-    def data_nbi_ports(self, nbi, port, angle, scale):
+
+
+    def data_nbi_ports(self, nbi, port, angle, scale, config):
         index = self.P_name.index(port)
         P_1_start = [self.P_1[0][index], self.P_1[1][index], self.P_1[2][index]]
         P_2_end = [self.new_P_1[0][index], self.new_P_1[1][index], self.new_P_1[2][index]]
@@ -587,8 +700,8 @@ class Data:
 
         valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
             P_1_start, index_NBI, P_2_end, self.new_NBI_start, self.new_NBI_end, self.surface, float(angle))
-        #print(extreme_points_1)
-        points, B_array, B_vec_array, S_array, B_max_array= self.Bget.gets(np.array(extreme_points_1[0], dtype=np.float64), np.array(extreme_points_2[0], dtype=np.float64), scale)
+
+        points, B_array, B_vec_array, S_array, B_max_array= self.Bget.gets(np.array(extreme_points_1[0], dtype=np.float64), np.array(extreme_points_2[0], dtype=np.float64), scale, config)
 
         angles, angles_vec_B, J_0_array=[],[], []
         for j in range(len(points)):
@@ -597,40 +710,64 @@ class Data:
                 vector_AB = np.array(P_2_end) - np.array(P_1_start)  
                 angle_B = geo.check_angle_2_vec(vector_AB/100, B_vec_array[j])
                 angles_vec_B.append(angle_B)
-                J_0 = self.Bget.J_0_calculate(points[j])
-                J_0_array.append(J_0)
+        J_0_array = self.Bget.J_0_calculate(points, config)
 
-        return [nbi, port, points, B_array, angles, B_vec_array, angles_vec_B,S_array, B_max_array, J_0_array]
+        return [nbi, port, points, B_array, angles, B_vec_array, angles_vec_B,S_array, B_max_array, J_0_array] 
+
+
+    def create_result_array_for_port_old(self, data_B_c):
+        WF_array = []
+
+        with ThreadPoolExecutor() as executor:
+            results = list(tqdm(executor.map(self.process_data_for_point, range(len(data_B_c[1])), [data_B_c] * len(data_B_c[0]))))
+
+        for result_for_i in results:
+            WF_array.append(result_for_i)
+
+    
+        return results
+
+    def process_data_for_point(self,i, data_B_c):
+
+        index_nbi = int(data_B_c[0][i].split('_')[-1]) - 1
+        result_for_j = []
+
+        for j in range(len(data_B_c[3][i])):
+            x_ev = np.linspace(10, 100, 300)
+            y_ev = np.linspace(-100, 100, 300) / 2.5
+
+            if index_nbi < 8:
+               result = WF.weight_Function(data_B_c[4][i][j], data_B_c[3][i][j], x_ev, y_ev)
+            else:
+                result = WF.CTS_wf(data_B_c[6][i][j], data_B_c[3][i][j], x_ev, y_ev)
+            result_for_j.append(result) 
+        return result_for_j
+
+
+
 
 class calculus():
     def __init__(self):
-        pass
+         lll=0
 
-
-
-
-    def gets(self, point1, point2, scale):
-      point1 = point1/100
-      point2= point2/100
+    def gets(self, point1, point2, scale, config):
+      point1, point2 = point1 / 100, point2 / 100
       points = np.linspace(point1, point2, scale)
-      #print(points)
-      points = points[1:-1]
+
       previous_directory = os.getcwd()
       os.chdir('J_0_test')
+
+
       mconf_config = {'B0': 2.525,
                 'B0_angle': 0.0,
-                'accuracy': 1e-8, #accuracy of magnetic to cartesian coordinat transformation
-                'truncation': 1e-8} #trancation of mn harmonics
-      eq = mconf.Mconf_equilibrium('w7x-sc1.bc',mconf_config=mconf_config)
+                'accuracy': 1e-10, 
+                'truncation': 1e-10} 
+      eq = mconf.Mconf_equilibrium(config ,mconf_config=mconf_config)
+
+      
       B_array, B_vec_array, S_array, B_max_array= [], [], [], []
       for i in range(len(points)):
          S, vecB = eq.get_B(points[i])
-         #if i != 0:
-          #print("Distance:", np.sqrt((points[i][0]-points[i-1][0])**2 + (points[i][1]-points[i-1][1])**2 + (points[i][2]-points[i-1][2])**2))
-          #print("S", S)
-          #print("point1", points[i])
-          #print("point2", points[i-1])
-
          B_max = eq.get_Bmax(S)
          valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
          B_array.append(valueB)
@@ -640,119 +777,121 @@ class calculus():
 
       os.chdir(previous_directory)
       return points, B_array, B_vec_array, S_array, B_max_array
-     
+    
 
-    def J_0_calculate(self, point):
+
+
+
+
+
+
+
+    #------------------------------------------------------------------------------J_0 calc-------------------------------------------------------------------------------------------------
+    def J_0_calculate(self, points,config):
+     points = np.array(points, dtype=np.float64)
+     previous_directory = os.getcwd()
+     os.chdir('J_0_test')
+    
+     with ProcessPoolExecutor() as executor:
+        results = list(tqdm(executor.map(self.calculate_J_0_for_point, points, [config] * len(points)), total=len(points)))
+     print(config)
+     os.chdir(previous_directory)
+     return results
+
+    def calculate_J_0_for_point(self, point, config):
+      #data type
       point = np.array(point, dtype=np.float64)
-      print(point)
-      previous_directory = os.getcwd()
-      os.chdir('J_0_test')
+
+      #config
       mconf_config = {'B0': 2.525,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-10} #trancation of mn harmonics
-      eq = mconf.Mconf_equilibrium('w7x-sc1.bc',mconf_config=mconf_config)
+      eq = mconf.Mconf_equilibrium(config,mconf_config=mconf_config)
+      
 
-      L = 400  
-      N = 1000 
-      rhs_B = lambda l, y: eq.get_B(y)[1] / np.linalg.norm(eq.get_B(y)[1])
-      rhs_B_backward = lambda l, y: -eq.get_B(y)[1] / np.linalg.norm(eq.get_B(y)[1])
+      #constant
+      s0, vecB = eq.get_B(point)
+      B_value = np.linalg.norm(vecB)
+      B_max_point = eq.get_Bmax(s0)
+      L = 100 
+      N = 1000
+      E_values = np.linspace(10, 100, 300) * (1.6 * 10**(-19)) * 10**3  
+      mu_values = np.linspace(-100, 100, 300)/2.5 * (1.6 * 10**(-19)) * 10**3 
 
-
-      forward_sol = solve_ivp(rhs_B, [0, L], point, method='RK45', max_step=L / N, atol=1e-6, dense_output=True)
-      forward_s, forward_B = eq.get_s_B_T(forward_sol.y[0], forward_sol.y[1], forward_sol.y[2])
-      forward_magB = np.linalg.norm(forward_B, axis=1)
-      forward_path = np.zeros(forward_sol.y.shape[1])
-      forward_path[1:] = np.cumsum(np.sqrt(np.sum(np.diff(forward_sol.y, axis=-1)**2, axis=0)))
-
-
-
-      backward_sol = solve_ivp(rhs_B_backward, [0, L], point, method='RK45', max_step=L / N, atol=1e-6, dense_output=True)
-      backward_s, backward_B = eq.get_s_B_T(backward_sol.y[0], backward_sol.y[1], backward_sol.y[2])
-      backward_magB = np.linalg.norm(backward_B, axis=1)
-      backward_path = np.zeros(backward_sol.y.shape[1])
-      backward_path[1:] = np.cumsum(np.sqrt(np.sum(np.diff(backward_sol.y, axis=-1)**2, axis=0)))
+      #Solve eq
+      def solve_differential(point, L, N, rhs_B):
+        sol = solve_ivp(rhs_B, [0, L], point,method='RK45', max_step=L / N,atol=1e-6, dense_output=True)
+        s_sol, B_sol = eq.get_s_B_T(sol.y[0],sol.y[1], sol.y[2])
+        magB = np.linalg.norm(B_sol, axis=1)
+        path = np.zeros(sol.y.shape[1])
+        path = np.cumsum(np.sqrt(np.sum(np.diff(sol.y,axis=-1)**2, axis=0)))
+        path = np.insert(path, 0, 0) 
+        return magB, path
 
       
-      E_values = np.linspace(10, 100, 100) * (1.6 * 10**(-19)) * 10**3  
-      mu_values = np.linspace(0.1, 100, 100) * (1.6 * 10**(-19)) * 10**3 
+      rhs_B_forward = lambda l, y: eq.get_B(y)[1]/ np.linalg.norm(eq.get_B(y)[1])
+      rhs_B_backward = lambda l, y: -eq.get_B(y)[1]/ np.linalg.norm(eq.get_B(y)[1])
 
-      J_0_map = np.zeros((len(E_values), len(mu_values)))
+      forward_magB, forward_path = solve_differential(point, L, N, rhs_B_forward)
+      backward_magB, backward_path = solve_differential(point, L, N, rhs_B_backward)
 
-  
-      for i, E in enumerate(E_values):
-          for j, mu in enumerate(mu_values):
+    
+      #Arrays
+      E_values, mu_values = np.meshgrid(E_values, mu_values)
+      J_0_map = np.zeros(E_values.shape)
+
+      for i in range(E_values.shape[0]):
+          for j in range(mu_values.shape[1]):
               
-              B_max = E / mu
-
+              E = E_values[i, j]
+              mu = mu_values[i, j]
+              B_max_particle = np.abs(E / mu)
               
-              forward_mask = forward_magB <= B_max
-              forward_idx_limit = np.argmax(~forward_mask) if np.any(~forward_mask) else len(forward_magB)
-              forward_magB_limited = forward_magB[:forward_idx_limit]
-              forward_path_limited = forward_path[:forward_idx_limit]
               
-              forward_integrand = np.sqrt(2 * mu * (B_max - forward_magB_limited))
+              if B_max_particle<B_max_point and B_max_particle>B_value and s0<1:
+               
+               #-------------------Integral----------------------------
+               def compute_integrals(magB, path, mu, B_max_particle):
+                 mask = magB <= B_max_particle
+                 idx_limit = np.argmax(~mask) if np.any(~mask) else len(magB)
+                 magB_limited, path_limited = magB[:idx_limit], path[:idx_limit]
+                 integrand = np.sqrt(2 * np.abs(mu) * (B_max_particle - magB_limited))
+                 return integrand, path_limited
+    
 
-
-              backward_mask = backward_magB <= B_max
-              backward_idx_limit = np.argmax(~backward_mask) if np.any(~backward_mask) else len(backward_magB)
-              backward_magB_limited = backward_magB[:backward_idx_limit]
-              backward_path_limited = backward_path[:backward_idx_limit]
-              
-              backward_integrand = np.sqrt(2 * mu * (B_max - backward_magB_limited))
-
-
+               forward_integrand, forward_path_limited = compute_integrals(forward_magB, forward_path, mu, B_max_particle)
+               backward_integrand, backward_path_limited = compute_integrals(backward_magB, backward_path, mu, B_max_particle)
               
 
-        
-              B_initial = forward_magB[0]  
-              if E/mu <= B_initial:
-                  J_0_map[i, j] = 0
-                  continue
-      
-              
-              complete_path = np.concatenate([
+               complete_path = np.concatenate([
                 backward_path_limited[::-1],  
                 forward_path_limited,         
                 forward_path_limited[::-1],   
                 backward_path_limited         
                 ])
 
-              complete_integrand = np.concatenate([
-                backward_integrand[::-1],    
-                forward_integrand,           
-                forward_integrand[::-1],     
-                backward_integrand          
-                ])
+               complete_integrand = np.concatenate([
+                 backward_integrand[::-1],    
+                 forward_integrand,           
+                 forward_integrand[::-1],     
+                 backward_integrand          
+                 ])
+               
+               J_0_map[i, j] = self.trapezoidal_integral(complete_integrand, complete_path)*1e6
+              else:
+               J_0_map[i, j] = 0.0     
 
-              J_0 = self.trapezoidal_integral(complete_integrand, complete_path)
-              J_0_map[i, j] = J_0
-              #print(J_0_map[i, j])
-              
-      os.chdir(previous_directory)
       return J_0_map
     
     def trapezoidal_integral(self, f, s):
-
-      # Проверяем, что размеры массивов совпадают
-      if len(s) != len(f):
-        raise ValueError("Длины массивов s и f должны совпадать")
-
-      # Вычисляем разности между соседними точками s
       ds = np.abs(np.diff(s))
-
-      # Средние значения функции между соседними точками
       avg_f = (f[:-1] + f[1:]) / 2
-
-      # Интеграл на каждом сегменте
       segment_integrals = ds * avg_f
-
-      # Суммируем все сегментные интегралы
       integral = np.sum(segment_integrals)
-    
       return integral
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-        
 
 if __name__ == "__main__":
     app = App()
