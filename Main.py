@@ -302,7 +302,8 @@ class App(ctk.CTk):
             self.conf = data['conf']
             self.data_wf = self.all_results[10][0]
             new_names = self.port_name()
-            self.textbox.insert("end", f"\n[{timestamp}]: Loaded Data:\nMatrix size: {self.scale}\nViewing Angle: {self.angle}\nConfiguration: {self.conf} \nPorts: {', '.join(new_names)} \n  ")#Diagnostics: {', '.join(self.diagnostics)}\n
+            self.textbox.insert("end", f"\n[{timestamp}]: Loaded Data:\nMatrix size: {self.scale}\nViewing Angle: {self.angle}\nConfiguration: {self.conf} \nPorts: {', '.join(new_names)} \n  ")
+            #Diagnostics: {', '.join(self.diagnostics)}\n
         except Exception as e:
             self.textbox.insert("end", f"\n[{timestamp}]: Error during loading file: {e}\n")
             
@@ -521,6 +522,9 @@ class App(ctk.CTk):
                name = 'C'
             axs[num_arrays-1, i].set_xlabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
             axs[i, 0].set_ylabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
+
+        file_name = f"Results_{self.angle}_{self.scale}_{self.conf[:-3]}.png"  
+        fig.savefig(f"Results/{file_name}", dpi=2000, bbox_inches='tight')
 
         #plt.title('FIDA')
         plt.close('all')
