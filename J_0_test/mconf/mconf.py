@@ -3,6 +3,7 @@ import platform
 import os
 import ctypes as ct
 import numpy as np
+import ctypes
 
 class Mconf_equilibrium:
     """
@@ -28,13 +29,19 @@ class Mconf_equilibrium:
     def load_lib(self):
         
         if platform.system()=='Windows':
-            libname="mconf/mconf.src/bin/mconf_matlab64.dll"
+            libname = os.path.join(os.getcwd(),"mconf/mconf.src/bin/mconf_matlab64.dll")
+            print(libname)
+            if os.path.exists(libname):
+               print(f"Файл {libname} найден!")
+            else:
+               print(f"Файл {libname} не найден.")
+
         elif platform.system()=='Linux':
             libname = os.path.join(os.path.dirname(__file__),"mconf.src/unix/mconf_matlab64.so")
         elif platform.system()=='Darwin':
             libname= os.path.join(os.path.dirname(__file__),"mconf.src/osx/mconf_matlab64.dylib")
         
-        self.mconf = self.import_mconf(libname=libname) #import mconf (VMEC equilibrium)
+        self.mconf = self.import_mconf(libname) #import mconf (VMEC equilibrium)
     
     def load_equi_file(self, equilibrium_name, mconf_config=None, EQDSK_config=None):
 
@@ -112,7 +119,20 @@ class Mconf_equilibrium:
         else:
             print('No file:', equilibrium_name)
     
-    def import_mconf(self,libname='mconf_matlab64.so',path='.'):
+    def import_mconf(self,libname,path='.'):
+        dll_path = os.path.join(path, libname)
+    
+       # Ensure we're working with a full, properly formatted path
+        dll_path = os.path.abspath(dll_path)  # Get the absolute path
+    
+    # Try loading the DLL using ctypes directly
+        try:
+         print(f"Attempting to load DLL from: {dll_path}")
+         self.mconf = ctypes.WinDLL(dll_path)  # Use ctypes.CDLL to load the DLL directly
+         print(f"Library loaded successfully from {dll_path}")
+        except OSError as e:
+         print(f"Error loading DLL: {e}")
+         raise e
         mconf = np.ctypeslib.load_library(libname,path)
         vec3  = np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='CONTIGUOUS')
         
