@@ -5,6 +5,8 @@ import ctypes as ct
 import numpy as np
 import ctypes
 
+
+
 class Mconf_equilibrium:
     """
     Class provides access to VMEC (and other) equilibriums via Juri Turkin's mconf c-based libary.
@@ -29,13 +31,8 @@ class Mconf_equilibrium:
     def load_lib(self):
         
         if platform.system()=='Windows':
-            libname = os.path.join(os.getcwd(),"mconf/mconf.src/bin/mconf_matlab64.dll")
+            libname = os.path.join(os.path.dirname(__file__),"mconf.src\\bin\\mconf_matlab64.dll")
             print(libname)
-            if os.path.exists(libname):
-               print(f"Файл {libname} найден!")
-            else:
-               print(f"Файл {libname} не найден.")
-
         elif platform.system()=='Linux':
             libname = os.path.join(os.path.dirname(__file__),"mconf.src/unix/mconf_matlab64.so")
         elif platform.system()=='Darwin':
@@ -128,7 +125,7 @@ class Mconf_equilibrium:
     # Try loading the DLL using ctypes directly
         try:
          print(f"Attempting to load DLL from: {dll_path}")
-         self.mconf = ctypes.WinDLL(dll_path)  # Use ctypes.CDLL to load the DLL directly
+         self.mconf = ctypes.WinDLL("C:/Users/ivaku/Documents/Script_2.0/J_0_test/mconf/mconf.src/bin/mconf_matlab64.dll")  # Use ctypes.CDLL to load the DLL directly
          print(f"Library loaded successfully from {dll_path}")
         except OSError as e:
          print(f"Error loading DLL: {e}")
