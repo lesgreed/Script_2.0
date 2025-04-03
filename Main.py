@@ -6,6 +6,8 @@ import J_0_test.mconf.mconf as mconf
 import Weight_Fuction.WF_FIDA as WF
 import subprocess
 import sys
+import platform
+print(platform.architecture())
 
 
 def install(package):
@@ -322,7 +324,11 @@ class App(ctk.CTk):
         return new_names
     
     def get_result_files(self):
-        return [f for f in os.listdir(self.results_folder) if f.endswith(".json")]
+        if os.path.exists(self.results_folder):
+         return [f for f in os.listdir(self.results_folder) if f.endswith(".json")]
+        else:
+          print(f"Directory {self.results_folder} not found.")
+          return []
     
     def get_result_files_conf(self):
         files = [f for f in os.listdir(self.conf_folder) if f.endswith(".bc")]
