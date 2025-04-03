@@ -7,7 +7,6 @@ import Weight_Fuction.WF_FIDA as WF
 import subprocess
 import sys
 import platform
-print(platform.architecture())
 
 
 def install(package):
@@ -49,7 +48,10 @@ class App(ctk.CTk):
         self.geometry(f"{1600}x{900}")
         self.data_instance = Data()
         self.Bget = calculus()
-
+        
+        
+        curr_directory = os.getcwd()
+        print(curr_directory)
         # Global variable for slider value
         self.angle = int(90)
         self.scale = 10  
@@ -61,7 +63,7 @@ class App(ctk.CTk):
         self.Name_Ports = ['2_1_AEA', '2_1_AEM','2_1_AET', '2_1_AEA', '2_1_AEM','2_1_AET']
         self.Name_NBI = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
         self.results_folder = "Results"  
-        self.conf_folder = "J_0_test"
+        self.conf_folder =os.path.join(curr_directory, "J_0_test")
         self.conf = 'w7x-sc1_ecrh_beta=0.02.bc'
         self.diagnostics = ['FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA']
 
@@ -142,11 +144,12 @@ class App(ctk.CTk):
 
         # Button to show graph
         self.show_graph_button = ctk.CTkButton(self, text="Add Port and build", command=lambda: self.dummy_function())
-        self.show_graph_button.grid(row=1, column=1, padx=(20, 0), pady=(10, 0), sticky="w")
+        self.show_graph_button.grid(row=1, column=1, padx=(20, 0), pady=(10, 0),sticky="nsew")
 
                 # Button to show graph
         self.show_graph_button = ctk.CTkButton(self, text="Build", command=lambda: self.generate_and_show_graph())
-        self.show_graph_button.grid(row=1, column=1, padx=(200, 0), pady=(10, 0), sticky="w")
+        self.show_graph_button.grid(row=1, column=2, padx=(20, 0), pady=(10, 0), sticky="nsew")
+
 
 
 
@@ -246,8 +249,17 @@ class App(ctk.CTk):
         self.load_button.grid(row=9, column=0, padx=20, pady=5, sticky="w")
 
         # Canvas for displaying the graph
-        self.graph_canvas = ctk.CTkCanvas(self, width=800, height=600, bg="white")
-        self.graph_canvas.grid(row=0, column=3, padx=(20, 0), pady=(20, 0), sticky="nsew")
+# Создаем холст для графика в колонке 3
+        self.graph_canvas = ctk.CTkCanvas(self, bg="white")
+        self.graph_canvas.grid(row=0, column=3, rowspan=999, padx=(20, 20), pady=(20, 20), sticky="nsew")
+
+# Делаем третью колонку растягивающейся
+        self.grid_columnconfigure(3, weight=1)  # 3-я колонка растягивается
+
+# Делаем все строки растягивающимися
+        for i in range(3):  # Или больше, если у тебя много строк
+            self.grid_rowconfigure(i, weight=1)
+
     #--------------------------------------------------------------------------------------------------------------------------------------------- 
 
 
@@ -438,12 +450,12 @@ class App(ctk.CTk):
 
     #---------------------------------------Add new matrxi to grid ----------------------------------------------------
     def create_result_array_for_port(self, selected_nbi, selected_port):
-        data = self.data_instance.data_nbi_ports(selected_nbi, selected_port, self.angle, self.scale)
+        data = self.data_instance.data_nbi_ports(selected_nbi, selected_port, self.angle, self.scale, self.conf)
 
         for i in range(len(data)):
             self.all_results[i].append(data[i])
 
-        reuslt = self.data_instance.process_data_for_point(len(self.all_results[0])-1, self.all_results, self.conf)
+        reuslt = self.data_instance.process_data_for_point(len(self.all_results[0])-1, self.all_results)
         self.data_wf.append(reuslt)
     #------------------------------------------------------------------------------------------------------------------
 
@@ -509,7 +521,7 @@ class App(ctk.CTk):
         
         
         # Add colorbar to the last subplot
-        cax = fig.add_axes([0.93, 0.15, 0.02, 0.7])  # [x, y, width, height]
+        cax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [x, y, width, height]
         
         plt.colorbar(im, cax=cax)
 
@@ -538,7 +550,8 @@ class App(ctk.CTk):
         # Embed the matplotlib figure in the Tkinter canvas
         canvas = FigureCanvasTkAgg(fig, master=self.graph_canvas)
         canvas_widget = canvas.get_tk_widget()
-        canvas_widget.grid(row=0, column=0, padx=20, pady=(20, 0), sticky="nsew")
+        canvas_widget.grid(row=0, column=0, padx=(20,20), pady=(20, 0), sticky="nsew")
+        canvas_widget.pack(fill='both', expand=True)
 
         # Update the current graph reference
         self.current_graph = canvas
@@ -608,7 +621,7 @@ class App(ctk.CTk):
             #not free same 
             mask_condition_5 = both_below_B_mask & J_0_check_mask
             #not free diff 
-            mask_condition_6 = both_below_B_mask #& np.logical_not(J_0_check_mask)
+            mask_condition_6 = both_below_B_mask & np.logical_not(J_0_check_mask)
             #f
             mask_condition_7 = mask_no_accept
             #  
@@ -618,7 +631,7 @@ class App(ctk.CTk):
             #mask
             product[mask_condition_1] = 0
             product[mask_condition_4] = 0
-            product[mask_condition_6] = 0
+            #product[mask_condition_6] = 0
             product[mask_condition_7] = 0
             product[mask_condition_8] = 0
 
