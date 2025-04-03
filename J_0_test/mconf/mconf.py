@@ -31,8 +31,7 @@ class Mconf_equilibrium:
     def load_lib(self):
         
         if platform.system()=='Windows':
-            libname = os.path.join(os.path.dirname(__file__),"mconf.src\\bin\\mconf_matlab64.dll")
-            print(libname)
+            libname="mconf/mconf.src/bin/mconf_matlab64.dll" 
         elif platform.system()=='Linux':
             libname = os.path.join(os.path.dirname(__file__),"mconf.src/unix/mconf_matlab64.so")
         elif platform.system()=='Darwin':
@@ -117,19 +116,6 @@ class Mconf_equilibrium:
             print('No file:', equilibrium_name)
     
     def import_mconf(self,libname,path='.'):
-        dll_path = os.path.join(path, libname)
-    
-       # Ensure we're working with a full, properly formatted path
-        dll_path = os.path.abspath(dll_path)  # Get the absolute path
-    
-    # Try loading the DLL using ctypes directly
-        try:
-         print(f"Attempting to load DLL from: {dll_path}")
-         self.mconf = ctypes.WinDLL("C:/Users/ivaku/Documents/Script_2.0/J_0_test/mconf/mconf.src/bin/mconf_matlab64.dll")  # Use ctypes.CDLL to load the DLL directly
-         print(f"Library loaded successfully from {dll_path}")
-        except OSError as e:
-         print(f"Error loading DLL: {e}")
-         raise e
         mconf = np.ctypeslib.load_library(libname,path)
         vec3  = np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='CONTIGUOUS')
         
