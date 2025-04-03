@@ -602,7 +602,7 @@ class App(ctk.CTk):
             #not free same 
             mask_condition_5 = both_below_B_mask & J_0_check_mask
             #not free diff 
-            mask_condition_6 = both_below_B_mask & np.logical_not(J_0_check_mask)
+            mask_condition_6 = both_below_B_mask #& np.logical_not(J_0_check_mask)
             #f
             mask_condition_7 = mask_no_accept
             #  
