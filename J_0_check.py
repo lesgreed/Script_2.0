@@ -185,8 +185,9 @@ if __name__ == "__main__":
     # Создание регулярной сетки в координатах R, Z
     R_min, R_max = min(R_phi) - 1, max(R_phi) + 1
     Z_min, Z_max = min(Z_phi) - 1, max(Z_phi) + 1
-    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 50),
-                                 np.linspace(Z_min, Z_max, 50))
+    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 10),
+
+                                 np.linspace(Z_min, Z_max,10))
 
     # Проверка точек сетки на принадлежность контуру
     grid_points = np.vstack((grid_R.ravel(), grid_Z.ravel())).T
@@ -230,4 +231,20 @@ if __name__ == "__main__":
 
 # Отображение графика
     plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -550,7 +550,7 @@ class App(ctk.CTk):
         # Embed the matplotlib figure in the Tkinter canvas
         canvas = FigureCanvasTkAgg(fig, master=self.graph_canvas)
         canvas_widget = canvas.get_tk_widget()
-        canvas_widget.grid(row=0, column=0, padx=(20,20), pady=(20, 0), sticky="nsew")
+        #canvas_widget.grid(row=0, column=0, padx=(10,10), pady=(10, 0), sticky="nsew")
         canvas_widget.pack(fill='both', expand=True)
 
         # Update the current graph reference
@@ -631,7 +631,7 @@ class App(ctk.CTk):
             #mask
             product[mask_condition_1] = 0
             product[mask_condition_4] = 0
-            #product[mask_condition_6] = 0
+            product[mask_condition_6] = 0
             product[mask_condition_7] = 0
             product[mask_condition_8] = 0
 
@@ -793,6 +793,8 @@ class calculus():
          S, vecB = eq.get_B(points[i])
          B_max = eq.get_Bmax(S)
          valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
+         if valueB>3:
+             print(valueB)
          B_array.append(valueB)
          B_vec_array.append(vecB)
          S_array.append(S)
