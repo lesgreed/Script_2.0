@@ -121,9 +121,9 @@ if __name__ == "__main__":
     axes[2].plot(R_phi, Z_phi, color="red", linewidth=1)
     axes[2].set_title('w7x-sc1_ecrh_beta=0.04.bc')
 
-    contour4 = axes[3].contourf(grid_R, grid_Z, B_grid_3 - B_grid_1, levels=200, cmap="plasma")
+    contour4 = axes[3].contourf(grid_R, grid_Z, B_grid_1 - B_grid_2, levels=200, cmap="plasma")
     axes[3].plot(R_phi, Z_phi, color="red", linewidth=1)
-    axes[3].set_title('Difference (β=0.04 - β=0.00)')
+    axes[3].set_title('Difference (β=0.00 - β=0.02)')
 
         # Добавляем общий colorbar
     cbar = fig.colorbar(contour1, ax=axes, orientation='vertical', fraction=0.05, pad=0.02)
