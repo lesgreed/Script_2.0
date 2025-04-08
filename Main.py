@@ -793,8 +793,14 @@ class calculus():
          S, vecB = eq.get_B(points[i])
          B_max = eq.get_Bmax(S)
          valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
-         if valueB>3:
-             print(valueB)
+         S_array.append(S)
+      start_indices, end_indices = self.find_transitions(S_array)
+      points = np.linspace(points[start_indices], points[end_indices], scale)
+      for i in range(len(points)):
+         S, vecB = eq.get_B(points[i])
+         B_max = eq.get_Bmax(S)
+         valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
+         S_array.append(S)
          B_array.append(valueB)
          B_vec_array.append(vecB)
          S_array.append(S)
@@ -804,6 +810,17 @@ class calculus():
       return points, B_array, B_vec_array, S_array, B_max_array
     
 
+    def find_transitions(self, arr):
+        start_indices = []
+        end_indices = []
+    
+        for i in range(len(arr) - 1):
+            if arr[i] >= 1 and arr[i+1] < 1:   
+                start_indices.append(i+1)
+            elif arr[i] < 1 and arr[i+1] >= 1: 
+                end_indices.append(i+1)
+    
+        return start_indices, end_indices
 
 
 

@@ -205,8 +205,8 @@ def visualisation(surface,lines1, lines2,NBI_index,new_P_1,valid_indices, new_NB
     plotter.add_mesh(surface, color='cyan', show_edges=True, opacity=0.2)
     #plotter.add_mesh(lines2[NBI_index], color='red', line_width=3) 
     #add_valid_points_to_plotter(plotter, new_P_1, valid_indices, color='red', point_size=12)
-    #NBI_labels = [f"NBI {i}" for i in range(new_NBI_start.shape[1])]  
-    #add_labels(plotter, new_NBI_start, NBI_labels)
+    NBI_labels = [f"NBI {i}" for i in range(new_NBI_start.shape[1])]  
+    add_labels(plotter, new_NBI_start, NBI_labels)
 
 
     #add_points_to_plotter(plotter, new_P_1.T, color='yellow', point_size=12)
@@ -223,8 +223,8 @@ def visualisation(surface,lines1, lines2,NBI_index,new_P_1,valid_indices, new_NB
     #for line in lines1:
      #   plotter.add_mesh(line, color='yellow', line_width=3)
 
-    #for line in lines2:
-    #    plotter.add_mesh(line, color='red', line_width=3)
+    for line in lines2:
+        plotter.add_mesh(line, color='red', line_width=3)
     # Определяем точку центра
     point_center = np.array([419.5219516345385, 352.02071488731394, 0.271178082191781])
 
@@ -264,7 +264,7 @@ if __name__ == "__main__":
 
      # Add NBI and ports to plot
     find_good_ports_start_time = time.time() 
-    NBI_index = 1
+    NBI_index = 8
     angle = 90
     valid_indices, extreme_points_1, extreme_points_2, valid_lines = NBI_and_PORTS(P_1, NBI_index, new_P_1,new_NBI_start, new_NBI_end, surface, angle)
     find_good_ports_end_time = time.time()  
