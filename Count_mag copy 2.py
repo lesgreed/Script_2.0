@@ -11,48 +11,81 @@ from scipy.integrate import cumulative_trapezoid as cumtrapz
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor
 
-def calculate_relative_differences_8_neighbors_3d(J_grid, coords_3d):
-    min_diffs = []
-    max_diffs = []
-    distances = []
+def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=200, circle_radius=2):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Circle
 
-    rows, cols = J_grid.shape
+    # Центр круга
+    center_R = np.mean(R_inside)
+    center_Z = np.mean(Z_inside)
+    center = np.array([center_R, center_Z])
+    radius = circle_radius
 
-    coords_3d = np.array(coords_3d).reshape(J_grid.shape + (3,))
+    # Создание равномерной сетки точек
+    r_vals = np.linspace(center_R - radius, center_R + radius, int(np.sqrt(num_points)*2))
+    z_vals = np.linspace(center_Z - radius, center_Z + radius, int(np.sqrt(num_points)*2))
+    R_grid_local, Z_grid_local = np.meshgrid(r_vals, z_vals)
+    R_flat = R_grid_local.flatten()
+    Z_flat = Z_grid_local.flatten()
 
-    for i in range(1, rows - 1):
-        for j in range(1, cols - 1):
-            center = J_grid[i, j]
-            if np.isnan(center) or center == 0:
+    # Маска для точек внутри круга
+    distances = np.sqrt((R_flat - center_R)**2 + (Z_flat - center_Z)**2)
+    inside_mask = distances <= radius
+    R_circle = R_flat[inside_mask]
+    Z_circle = Z_flat[inside_mask]
+
+    # === ПЛОТ ===
+    fig, axes = plt.subplots(1, 2, figsize=(30, 5), sharex=False, sharey=False)
+
+    # Контуры
+    contour1 = axes[0].contour(grid_R, grid_Z, B_grid_1, levels=20, cmap="plasma")
+    axes[0].plot(R_phi, Z_phi, color="red", linewidth=0.5)
+    axes[0].set_title('w7x-sc1.bc')
+
+    contour3 = axes[1].contour(grid_R, grid_Z, B_grid_2, levels=20, cmap="plasma")
+    axes[1].plot(R_phi, Z_phi, color="red", linewidth=0.5)
+    axes[1].set_title('w7x-sc1_ecrh_beta=0.04.bc')
+
+    # Круг на графиках 0 и 2
+    for ax in [axes[0], axes[1]]:
+        circle = Circle((center_R, center_Z), radius, color='blue', fill=False, linestyle='--', linewidth=1.5)
+        ax.add_patch(circle)
+
+
+    # Цветовые шкалы
+    fig.subplots_adjust(right=0.80)
+    fig.colorbar(contour1, ax=axes[0])
+    return R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask
+    
+
+
+def calculate_relative_differences_1d(J_vals, coords_3d):
+    min_diffs, max_diffs, distances = [], [], []
+
+    for i, center in enumerate(J_vals):
+        if np.isnan(center) or center == 0:
+            continue
+
+        center_coords = coords_3d[i]
+        local_diffs = []
+        local_dists = []
+
+        for j, neighbor_val in enumerate(J_vals):
+            if i == j or np.isnan(neighbor_val) or neighbor_val == 0:
                 continue
+            diff = np.abs(center - neighbor_val) / np.abs(center)
+            dist = np.linalg.norm(center_coords - coords_3d[j])
+            local_diffs.append(diff)
+            local_dists.append(dist)
 
-            center_coords = coords_3d[i, j]
-
-            neighbor_indices = [
-                (i-1, j-1), (i-1, j), (i-1, j+1),
-                (i,   j-1),           (i,   j+1),
-                (i+1, j-1), (i+1, j), (i+1, j+1)
-            ]
-
-            local_diffs = []
-            local_distances = []
-
-            for ni, nj in neighbor_indices:
-                neighbor_val = J_grid[ni, nj]
-                if not np.isnan(neighbor_val) and neighbor_val != 0:
-                    diff = np.abs(center - neighbor_val) / np.abs(center)
-                    local_diffs.append(diff)
-
-                    neighbor_coords = coords_3d[ni, nj]
-                    distance = np.linalg.norm(center_coords - neighbor_coords)
-                    local_distances.append(distance)
-
-            if local_diffs:
-                min_diffs.append(np.min(local_diffs))
-                max_diffs.append(np.max(local_diffs))
-                distances.extend(local_distances)
+        if local_diffs:
+            min_diffs.append(np.min(local_diffs))
+            max_diffs.append(np.max(local_diffs))
+            distances.extend(local_dists)
 
     return np.array(min_diffs), np.array(max_diffs), np.array(distances)
+
 
 
 def transform(R, Z, phi):
@@ -196,7 +229,17 @@ def MagField(points, t):
         os.chdir(previous_directory)
 
     return np.array(B_array), np.array(B_vec_array), np.array(S_array), np.array(B_max_array)
+def mean_without_outliers_iqr(arr):
+    arr = np.array(arr)
+    q1 = np.percentile(arr, 25)
+    q3 = np.percentile(arr, 75)
+    iqr = q3 - q1
 
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+
+    filtered = arr[(arr >= lower_bound) & (arr <= upper_bound)]
+    return np.mean(filtered)
 
 if __name__ == "__main__":
 
@@ -209,10 +252,10 @@ if __name__ == "__main__":
     path = Path(contour)
 
 
-    R_min, R_max = min(R_phi) + 70, max(R_phi) - 70
-    Z_min, Z_max = min(Z_phi) + 70, max(Z_phi) - 70
-    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 20),
-                                 np.linspace(Z_min, Z_max, 20))
+    R_min, R_max = min(R_phi) - 1, max(R_phi) + 1
+    Z_min, Z_max = min(Z_phi) - 1, max(Z_phi) + 1
+    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 60),
+                                 np.linspace(Z_min, Z_max, 60))
 
 
     grid_points = np.vstack((grid_R.ravel(), grid_Z.ravel())).T
@@ -231,30 +274,27 @@ if __name__ == "__main__":
         Z_inside_3D.append(z)
     points_inside = np.vstack((X_inside, Y_inside, Z_inside_3D)).T
 
-    #b2 = 'w7x-sc1_ecrh_beta=0.02.bc'
+
     b0 = 'w7x-sc1.bc'
     b4 = 'w7x-sc1_ecrh_beta=0.04.bc'
     B_array_1, B_vec_array, S_array, B_max_array_1 = MagField(points_inside/100, b0)
     B_array_2, B_vec_array, S_array, B_max_array_2 = MagField(points_inside/100, b4)
     
     
-    minim = max(np.nanmax(B_array_1), np.nanmax(B_array_2))
-    maxim = min(np.nanmin(B_max_array_1), np.nanmin(B_max_array_2))
-    print(np.nanmax(B_array_1))
+    #minim = max(np.nanmax(B_array_1), np.nanmax(B_array_2))
+    #maxim = min(np.nanmin(B_max_array_1), np.nanmin(B_max_array_2))
+    #print(np.nanmax(B_array_1))
     #print(np.nanmax(B_array_2))
-    print(np.nanmin(B_max_array_1))
+    #print(np.nanmin(B_max_array_1))
     #print(np.nanmin(B_max_array_2))
 
 
     B = (np.nanmax(B_array_1) + np.nanmin(B_max_array_1)) / 2
     print(B)
 
-    #B_1 = (np.max(B_array_1) + np.min(B_max_array_1))/2
-    #B_2 = (np.max(B_array_2) +np.min(B_max_array_2) )/2
 
-
-    res_1 = J_0_calculate(points_inside/100,b0, B)
-    res_1 = np.where(res_1==0, np.nan, res_1)
+    #res_1 = J_0_calculate(points_inside/100,b4, B)
+    #res_1 = np.where(res_1==0, np.nan, res_1)
 
     #res_2 = J_0_calculate(points_inside/100,b4, B)
     #res_2 = np.where(res_2==0, np.nan, res_2)
@@ -266,79 +306,62 @@ if __name__ == "__main__":
     J_0_grid_1,J_0_grid_2   = np.full(grid_R.shape, np.nan),np.full(grid_R.shape, np.nan)
 
     B_grid_1[mask]  = B_array_1
-    J_0_grid_1[mask] = res_1
+    #J_0_grid_1[mask] = res_1
 
-    #B_grid_2[mask]  = B_array_2
+    B_grid_2[mask]  = B_array_2
     #J_0_grid_2[mask] = res_2
-    coords_3d = np.full(grid_R.shape + (3,), np.nan)
-    coords_3d[mask] = np.array(list(zip(X_inside, Y_inside, Z_inside_3D)))
 
 
-    min_diffs, max_diffs, distances = calculate_relative_differences_8_neighbors_3d(J_0_grid_1, coords_3d)
+    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=10, circle_radius=5)
+ 
 
 
-    print(f"Минимальное из min_diffs: {np.min(min_diffs) * 100:.3f}%")
-    print(f"Максимальное из min_diffs: {np.max(min_diffs) * 100:.3f}%")
-    print(f"Минимальное из max_diffs: {np.min(max_diffs) * 100:.3f}%")
-    print(f"Максимальное из max_diffs: {np.max(max_diffs) * 100:.3f}%")
+    X_circ, Y_circ, Z_circ = [], [], []
+    for r, z in zip(R_circle, Z_circle):
+        x, y, z = inverse_transform(r, z, Phi)
+        X_circ.append(x)
+        Y_circ.append(y)
+        Z_circ.append(z)
+    points_circ = np.vstack((X_circ, Y_circ, Z_circ)).T
 
-    print(f"\n--- Расстояния между точками (3D) ---")
-    print(f"Минимальное расстояние: {np.nanmin(distances)*1000:.3f} мм")
-    print(f"Максимальное расстояние: {np.nanmax(distances)*1000:.3f} мм")
+    # === 2. Считаем B и J_0 внутри круга ===
+    B = (np.nanmax(B_array_1) + np.nanmin(B_max_array_1)) / 2
+    res_1 = J_0_calculate(points_circ / 100, b0, B)
+    res_2 = J_0_calculate(points_circ / 100, b4, B)
+
+    # Очищаем от нулей
+    res_1 = np.where(np.array(res_1) == 0, np.nan, res_1)
+    res_2 = np.where(np.array(res_2) == 0, np.nan, res_2)
+
+    # === 3. Переводим в сетки и считаем отличия ===
+    res_1_grid = np.full(R_grid_local.shape, np.nan)
+    res_2_grid = np.full(R_grid_local.shape, np.nan)
+    coords_3d = np.stack((X_circ, Y_circ, Z_circ), axis=-1)
+
+    res_1_grid[inside_mask.reshape(R_grid_local.shape)] = res_1
+    res_2_grid[inside_mask.reshape(R_grid_local.shape)] = res_2
+
+        # Используем обновлённую функцию
+    min_diff_1, max_diff_1, dists_1 = calculate_relative_differences_1d(np.array(res_1), coords_3d)
+    min_diff_2, max_diff_2, dists_2 = calculate_relative_differences_1d(np.array(res_2), coords_3d)
+
+    # === 5. Статистика расстояний ===
+    print("Минимальное расстояние между точками:", np.nanmin(dists_1))
+    print("Максимальное расстояние между точками:", np.nanmax(dists_1))
 
 
-    plt.figure(figsize=(14, 5))
+    # === 4. Гистограмма различий ===
+    import matplotlib.pyplot as plt
 
-    plt.subplot(1, 2, 1)
-    plt.hist(min_diffs * 100, bins=50, color='lightgreen', edgecolor='k')
-    plt.xlabel('Минимальное относительное отличие (%)')
-    plt.ylabel('Частота')
-    plt.title('Гистограмма min(relative differences)')
+    plt.figure(figsize=(10, 5))
+    plt.hist(max_diff_1, bins=30, alpha=0.6, label='Config 1: w7x-sc1.bc', color='blue')
+    plt.hist(max_diff_2, bins=30, alpha=0.6, label='Config 2: w7x-sc1_ecrh_beta=0.04.bc', color='orange')
+    plt.xlabel('Максимальное относительное отклонение от соседей')
+    plt.ylabel('Количество точек')
+    plt.title('Сравнение отклонений J₀ для двух конфигураций')
+    plt.legend()
     plt.grid(True)
-
-    plt.subplot(1, 2, 2)
-    plt.hist(max_diffs * 100, bins=50, color='salmon', edgecolor='k')
-    plt.xlabel('Максимальное относительное отличие (%)')
-    plt.ylabel('Частота')
-    plt.title('Гистограмма max(relative differences)')
-    plt.grid(True)
-
     plt.tight_layout()
     plt.show()
 
 
-
-
-
-
-
-    fig, axes = plt.subplots(1, 4, figsize=(15, 5), sharex=True, sharey=True)
-
-
-    contour1 = axes[0].contour(grid_R, grid_Z, B_grid_1, levels=20, cmap="plasma")
-    axes[0].plot(R_phi, Z_phi, color="red", linewidth=1)
-    axes[0].set_title('w7x-sc1.bc')
-
-    contour2 = axes[1].contour(grid_R, grid_Z, J_0_grid_1, levels=20, cmap="plasma")
-    axes[1].plot(R_phi, Z_phi, color="red", linewidth=1)
-    axes[1].set_title('J_0')
-
-    contour3 = axes[2].contour(grid_R, grid_Z, B_grid_2, levels=20, cmap="plasma")
-    axes[2].plot(R_phi, Z_phi, color="red", linewidth=1)
-    axes[2].set_title('w7x-sc1_ecrh_beta=0.04.bc')
-
-    contour4 = axes[3].contour(grid_R, grid_Z, J_0_grid_2, levels=20 , cmap="plasma")
-    axes[3].plot(R_phi, Z_phi, color="red", linewidth=1)
-    axes[3].set_title('J_0')
-
-
-
-
-
-
-    fig.subplots_adjust(right=0.80)
-    fig.colorbar(contour1, ax=axes[0])
-    fig.colorbar(contour2, ax=axes[1])
-    fig.colorbar(contour3, ax=axes[2])
-    fig.colorbar(contour4, ax=axes[3])
-    plt.show()
