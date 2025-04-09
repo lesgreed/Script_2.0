@@ -38,8 +38,8 @@ def get_intersection_points_NBI(NBI_X, NBI_Y, NBI_Z, NBI_uvec_X, NBI_uvec_Y, NBI
         intersection1, intersection2 = find_first_two_intersections(surface, start_point, direction_vector)
         direction_vector = intersection2 - intersection1
         direction_normalized = direction_vector / np.linalg.norm(direction_vector)
-        intersection1_shifted = intersection1 + direction_normalized * 20
-        intersection2_shifted = intersection2 - direction_normalized * 20
+        intersection1_shifted = intersection1 + direction_normalized * 1
+        intersection2_shifted = intersection2 - direction_normalized * 1
         new_NBI_start.append(intersection1_shifted)
         new_NBI_end.append(intersection2_shifted)
         lines.append(pv.Line(intersection1_shifted, intersection2_shifted))
@@ -119,8 +119,6 @@ def find_max_valid_range(P_1, new_P_1, NBI_start, NBI_end, surface, angle):
         point_1 = [P_1[0][i],P_1[1][i], P_1[2][i]]
         if len(check_intersection(point, mid_point, surface)) == 0 and float(check_segment_angle(point_1, point, mid_point))<=angle:
             valid_indices.append(i)
-            if i ==57:
-                print(check_segment_angle(point_1, point, mid_point), point_1, point)
             direction_to_start = NBI_start - mid_point
             direction_to_end = NBI_end - mid_point
             max_start = find_extreme_points(point_1, point, direction_to_start, mid_point, NBI_start, surface, angle)
