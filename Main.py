@@ -56,7 +56,7 @@ class App(ctk.CTk):
         self.angle = int(90)
         self.scale = 10  
         self.delta_s = 0.05
-        self.delta_J_0 = 0.05 
+        self.delta_J_0 = 0.01 
         self.current_graph = None
         self.all_results = []
         self.data_wf = []
@@ -270,9 +270,10 @@ class App(ctk.CTk):
 
     #-------------------------------------------------------------Save data-------------------------------------------------------------------    
     def save_results(self):
-        file_name = f"Results_{self.angle}_{self.scale}_{self.conf[:-3]}.json"  
+        timestamp = datetime.now().strftime("%H%M%S")
+        file_name = f"Results_{self.angle}_{self.scale}_{self.conf[:-3]}_{timestamp}.json"  
         file_path = os.path.join(self.results_folder, file_name)
-        timestamp = datetime.now().strftime("%H:%M:%S")
+
         try:
             data_to_save = {
             'scale': self.scale,
@@ -608,7 +609,13 @@ class App(ctk.CTk):
             ratio_mask_s = (np.abs(np.abs(s_1_i / s_2_j)-1) <=  self.delta_s)
             equal_s_mask = ratio_mask_s 
             #==================================NOT free=================================================
-            J_0_check_mask =  (np.abs(J_0_i - J_0_j) < self.delta_J_0 * np.maximum(np.abs(J_0_i), np.abs(J_0_j)))
+            def relative_difference(a, b):
+                numerator = np.abs(a - b)
+                denominator = np.maximum(np.maximum(np.abs(a), np.abs(b)), 1e-12)
+                return numerator / denominator
+
+
+            J_0_check_mask = relative_difference(J_0_i, J_0_j) < self.delta_J_0
             #==================================forbidden======================================
             mask_no_accept =  np.logical_not(mask_i_val) | np.logical_not(mask_j_val) 
 
@@ -636,8 +643,8 @@ class App(ctk.CTk):
             product[mask_condition_8] = 0
 
             sum_product = np.sum(product)
-            element = np.log10(np.where(sum_product > 0, sum_product, 1e-9))
-            MATRIX[i, j] = np.where(element>-9, element, -np.inf)
+            element = np.log10(np.where(sum_product > 0, sum_product, 1e-8))
+            MATRIX[i, j] = np.where(element>-8, element, -np.inf)
 
      return MATRIX
 
@@ -788,14 +795,18 @@ class calculus():
       eq = mconf.Mconf_equilibrium(config ,mconf_config=mconf_config)
 
       
-      B_array, B_vec_array, S_array, B_max_array= [], [], [], []
+      S_array = []
       for i in range(len(points)):
          S, vecB = eq.get_B(points[i])
-         B_max = eq.get_Bmax(S)
-         valueB = np.sqrt(vecB[0]**2 + vecB[1]**2 + vecB[2]**2)
          S_array.append(S)
       start_indices, end_indices = self.find_transitions(S_array)
-      points = np.linspace(points[start_indices], points[end_indices], scale)
+      start_point = points[start_indices[0]].reshape(3,)
+      end_point = points[end_indices[0]].reshape(3,)
+
+
+      points = np.linspace(start_point, end_point, scale)
+
+      B_array, B_vec_array, S_array, B_max_array= [], [], [], []
       for i in range(len(points)):
          S, vecB = eq.get_B(points[i])
          B_max = eq.get_Bmax(S)
@@ -856,8 +867,8 @@ class calculus():
       s0, vecB = eq.get_B(point)
       B_value = np.linalg.norm(vecB)
       B_max_point = eq.get_Bmax(s0)
-      L = 100 
-      N = 1000
+      L = 300 
+      N = 2000
       E_values = np.linspace(10, 100, 300) * (1.6 * 10**(-19)) * 10**3  
       mu_values = np.linspace(-100, 100, 300)/2.5 * (1.6 * 10**(-19)) * 10**3 
 
