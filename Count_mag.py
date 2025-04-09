@@ -91,9 +91,10 @@ if __name__ == "__main__":
     b2 = 'w7x-sc1_ecrh_beta=0.02.bc'
     b0 = 'w7x-sc1.bc'
     b4 = 'w7x-sc1_ecrh_beta=0.04.bc'
+    b5 = 'wout.txt'
     B_array_1, B_vec_array, S_array, B_max_array = MagField(points_inside/100, b0)
     B_array_2, B_vec_array, S_array, B_max_array = MagField(points_inside/100, b2)
-    B_array_3, B_vec_array, S_array, B_max_array = MagField(points_inside/100, b4)
+    B_array_3, B_vec_array, S_array, B_max_array = MagField(points_inside/100, b5)
 
 
 
@@ -109,19 +110,19 @@ if __name__ == "__main__":
     vmax = max(np.nanmax(B_grid_1), np.nanmax(B_grid_2), np.nanmax(B_grid_3))
 
     # Создаем контурные графики с одинаковыми уровнями
-    contour1 = axes[0].contourf(grid_R, grid_Z, B_grid_1, levels=200, cmap="Blues", vmin=vmin, vmax=vmax)
+    contour1 = axes[0].contour(grid_R, grid_Z, B_grid_1, levels=200, cmap="Blues", vmin=vmin, vmax=vmax)
     axes[0].plot(R_phi, Z_phi, color="red", linewidth=1)
     axes[0].set_title('w7x-sc1.bc')
 
-    contour2 = axes[1].contourf(grid_R, grid_Z, B_grid_2, levels=200, cmap="Blues", vmin=vmin, vmax=vmax)
+    contour2 = axes[1].contour(grid_R, grid_Z, B_grid_2, levels=200, cmap="Blues", vmin=vmin, vmax=vmax)
     axes[1].plot(R_phi, Z_phi, color="red", linewidth=1)
     axes[1].set_title('w7x-sc1_ecrh_beta=0.02.bc')
 
-    contour3 = axes[2].contourf(grid_R, grid_Z, B_grid_3, levels=200, cmap="Blues", vmin=vmin, vmax=vmax)
+    contour3 = axes[2].contour(grid_R, grid_Z, B_grid_3, levels=200, cmap="Blues", vmin=vmin, vmax=vmax)
     axes[2].plot(R_phi, Z_phi, color="red", linewidth=1)
-    axes[2].set_title('w7x-sc1_ecrh_beta=0.04.bc')
+    axes[2].set_title('b5')
 
-    contour4 = axes[3].contourf(grid_R, grid_Z, B_grid_1 - B_grid_2, levels=200, cmap="plasma")
+    contour4 = axes[3].contour(grid_R, grid_Z, B_grid_1 - B_grid_2, levels=200, cmap="plasma")
     axes[3].plot(R_phi, Z_phi, color="red", linewidth=1)
     axes[3].set_title('Difference (β=0.00 - β=0.02)')
 

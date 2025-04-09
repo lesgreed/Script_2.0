@@ -57,8 +57,8 @@ def calculate_J_0_for_point(point, config, B):
       s0, vecB = eq.get_B(point)
       B_value = np.linalg.norm(vecB)
       B_max_point = eq.get_Bmax(s0)
-      L = 100 
-      N = 1000
+      L = 300 
+      N = 2000
       E_value = 50 * (1.6 * 10**(-19)) * 10**3  
       mu_value =  E_value/B
 
@@ -114,7 +114,7 @@ def calculate_J_0_for_point(point, config, B):
                
                J_0 = trapezoidal_integral(complete_integrand, complete_path)*1e6
       else:
-               J_0 = np.nan     
+               J_0 = np.nan    
 
       return J_0
 
@@ -167,8 +167,8 @@ if __name__ == "__main__":
 
     R_min, R_max = min(R_phi) + 1, max(R_phi) - 1
     Z_min, Z_max = min(Z_phi) + 1, max(Z_phi) - 1
-    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 20),
-                                 np.linspace(Z_min, Z_max, 30))
+    grid_R, grid_Z = np.meshgrid(np.linspace(R_min, R_max, 30),
+                                 np.linspace(Z_min, Z_max, 40))
 
 
     grid_points = np.vstack((grid_R.ravel(), grid_Z.ravel())).T
@@ -187,11 +187,11 @@ if __name__ == "__main__":
         Z_inside_3D.append(z)
     points_inside = np.vstack((X_inside, Y_inside, Z_inside_3D)).T
 
-    b2 = 'w7x-sc1_ecrh_beta=0.02.bc'
+    #b2 = 'w7x-sc1_ecrh_beta=0.02.bc'
     b0 = 'w7x-sc1.bc'
-    #b4 = 'w7x-sc1_ecrh_beta=0.04.bc'
+    b4 = 'w7x-sc1_ecrh_beta=0.04.bc'
     B_array_1, B_vec_array, S_array, B_max_array_1 = MagField(points_inside/100, b0)
-    B_array_2, B_vec_array, S_array, B_max_array_2 = MagField(points_inside/100, b2)
+    B_array_2, B_vec_array, S_array, B_max_array_2 = MagField(points_inside/100, b4)
     
     
     minim = max(np.nanmax(B_array_1), np.nanmax(B_array_2))
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     print(np.nanmin(B_max_array_2))
 
 
-    B = (minim + maxim) / 2
+    B = 2.5#(minim + maxim) / 2
     print(B)
 
     #B_1 = (np.max(B_array_1) + np.min(B_max_array_1))/2
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     res_1 = J_0_calculate(points_inside/100,b0, B)
     res_1 = np.where(res_1==0, np.nan, res_1)
 
-    res_2 = J_0_calculate(points_inside/100,b2, B)
+    res_2 = J_0_calculate(points_inside/100,b4, B)
     res_2 = np.where(res_2==0, np.nan, res_2)
 
 
@@ -235,19 +235,19 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(1, 4, figsize=(15, 5), sharex=True, sharey=True)
 
 
-    contour1 = axes[0].contour(grid_R, grid_Z, B_grid_1, levels=15, cmap="plasma")
+    contour1 = axes[0].contour(grid_R, grid_Z, B_grid_1, levels=20, cmap="plasma")
     axes[0].plot(R_phi, Z_phi, color="red", linewidth=1)
     axes[0].set_title('w7x-sc1.bc')
 
-    contour2 = axes[1].contour(grid_R, grid_Z, J_0_grid_1, levels=15, cmap="plasma")
+    contour2 = axes[1].contour(grid_R, grid_Z, J_0_grid_1, levels=20, cmap="plasma")
     axes[1].plot(R_phi, Z_phi, color="red", linewidth=1)
     axes[1].set_title('J_0')
 
-    contour3 = axes[2].contour(grid_R, grid_Z, B_grid_2, levels=15, cmap="plasma")
+    contour3 = axes[2].contour(grid_R, grid_Z, B_grid_2, levels=20, cmap="plasma")
     axes[2].plot(R_phi, Z_phi, color="red", linewidth=1)
-    axes[2].set_title('w7x-sc1_ecrh_beta=0.02.bc')
+    axes[2].set_title('w7x-sc1_ecrh_beta=0.04.bc')
 
-    contour4 = axes[3].contour(grid_R, grid_Z, J_0_grid_2, levels=15, cmap="plasma")
+    contour4 = axes[3].contour(grid_R, grid_Z, J_0_grid_2, levels=20 , cmap="plasma")
     axes[3].plot(R_phi, Z_phi, color="red", linewidth=1)
     axes[3].set_title('J_0')
 
