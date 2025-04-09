@@ -312,7 +312,7 @@ if __name__ == "__main__":
     #J_0_grid_2[mask] = res_2
 
 
-    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=10, circle_radius=5)
+    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=100, circle_radius=5)
  
 
 
