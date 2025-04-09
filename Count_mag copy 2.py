@@ -11,11 +11,14 @@ from scipy.integrate import cumulative_trapezoid as cumtrapz
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor
 
-def calculate_relative_differences_8_neighbors(J_grid):
+def calculate_relative_differences_8_neighbors_3d(J_grid, coords_3d):
     min_diffs = []
     max_diffs = []
+    distances = []
 
     rows, cols = J_grid.shape
+
+    coords_3d = np.array(coords_3d).reshape(J_grid.shape + (3,))
 
     for i in range(1, rows - 1):
         for j in range(1, cols - 1):
@@ -23,19 +26,34 @@ def calculate_relative_differences_8_neighbors(J_grid):
             if np.isnan(center) or center == 0:
                 continue
 
-            neighbors = [
-                J_grid[i-1, j-1], J_grid[i-1, j], J_grid[i-1, j+1],
-                J_grid[i,   j-1],               J_grid[i,   j+1],
-                J_grid[i+1, j-1], J_grid[i+1, j], J_grid[i+1, j+1]
+            center_coords = coords_3d[i, j]
+
+            neighbor_indices = [
+                (i-1, j-1), (i-1, j), (i-1, j+1),
+                (i,   j-1),           (i,   j+1),
+                (i+1, j-1), (i+1, j), (i+1, j+1)
             ]
-            diffs = [np.abs(center - n) / np.abs(center)
-                     for n in neighbors if not np.isnan(n) and n != 0]
 
-            if diffs:
-                min_diffs.append(np.min(diffs))
-                max_diffs.append(np.max(diffs))
+            local_diffs = []
+            local_distances = []
 
-    return np.array(min_diffs), np.array(max_diffs)
+            for ni, nj in neighbor_indices:
+                neighbor_val = J_grid[ni, nj]
+                if not np.isnan(neighbor_val) and neighbor_val != 0:
+                    diff = np.abs(center - neighbor_val) / np.abs(center)
+                    local_diffs.append(diff)
+
+                    neighbor_coords = coords_3d[ni, nj]
+                    distance = np.linalg.norm(center_coords - neighbor_coords)
+                    local_distances.append(distance)
+
+            if local_diffs:
+                min_diffs.append(np.min(local_diffs))
+                max_diffs.append(np.max(local_diffs))
+                distances.extend(local_distances)
+
+    return np.array(min_diffs), np.array(max_diffs), np.array(distances)
+
 
 def transform(R, Z, phi):
     x = R   # Use R directly for x-axis
@@ -252,13 +270,22 @@ if __name__ == "__main__":
 
     #B_grid_2[mask]  = B_array_2
     #J_0_grid_2[mask] = res_2
+    coords_3d = np.full(grid_R.shape + (3,), np.nan)
+    coords_3d[mask] = np.array(list(zip(X_inside, Y_inside, Z_inside_3D)))
 
-    min_diffs, max_diffs = calculate_relative_differences_8_neighbors(J_0_grid_1)
+
+    min_diffs, max_diffs, distances = calculate_relative_differences_8_neighbors_3d(J_0_grid_1, coords_3d)
+
 
     print(f"Минимальное из min_diffs: {np.min(min_diffs) * 100:.3f}%")
     print(f"Максимальное из min_diffs: {np.max(min_diffs) * 100:.3f}%")
     print(f"Минимальное из max_diffs: {np.min(max_diffs) * 100:.3f}%")
     print(f"Максимальное из max_diffs: {np.max(max_diffs) * 100:.3f}%")
+
+    print(f"\n--- Расстояния между точками (3D) ---")
+    print(f"Минимальное расстояние: {np.nanmin(distances)*1000:.3f} мм")
+    print(f"Максимальное расстояние: {np.nanmax(distances)*1000:.3f} мм")
+
 
     plt.figure(figsize=(14, 5))
 
