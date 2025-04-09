@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
     contour3 = axes[2].contour(grid_R, grid_Z, B_grid_3, levels=200, cmap="Blues", vmin=vmin, vmax=vmax)
     axes[2].plot(R_phi, Z_phi, color="red", linewidth=1)
-    axes[2].set_title('b5')
+    axes[2].set_title('b5 ')
 
     contour4 = axes[3].contour(grid_R, grid_Z, B_grid_1 - B_grid_2, levels=200, cmap="plasma")
     axes[3].plot(R_phi, Z_phi, color="red", linewidth=1)

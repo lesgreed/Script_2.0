@@ -344,7 +344,8 @@ class App(ctk.CTk):
           return []
     
     def get_result_files_conf(self):
-        files = [f for f in os.listdir(self.conf_folder) if f.endswith(".bc")]
+        files = [f for f in os.listdir(self.conf_folder) if f.endswith((".bc", ".txt"))]
+
         if self.conf in files:
          files.remove(self.conf)
          files.insert(0, self.conf)
