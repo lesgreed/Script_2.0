@@ -344,7 +344,7 @@ class App(ctk.CTk):
           return []
     
     def get_result_files_conf(self):
-        files = [f for f in os.listdir(self.conf_folder) if f.endswith((".bc", ".txt"))]
+        files = [f for f in os.listdir(self.conf_folder) if f.endswith((".bc", ".txt", ".nc"))]
 
         if self.conf in files:
          files.remove(self.conf)
@@ -507,14 +507,16 @@ class App(ctk.CTk):
                  MATRIX= np.transpose(MATRIX)
                  filtered_values = MATRIX[MATRIX != -np.inf]
                  min_value = np.min(filtered_values) if filtered_values.size > 0 else -9
-                 #min_value = np.min(MATRIX)
+                 #min_value = 2.0
                  color = np.append(color, min_value)
                  Matr[i, j]  = MATRIX
         for i in range(num_arrays):
             for j in range(num_arrays):
 
                 One_Matr = Matr[i, j] 
-                im = axs[i, j].imshow(One_Matr, cmap='jet', origin='upper', aspect='auto', vmin=min_value, vmax=np.max(MATRIX))
+                max_value =np.max(MATRIX)
+                #max_value = 5.0
+                im = axs[i, j].imshow(One_Matr, cmap='gist_ncar', origin='upper', aspect='auto', vmin=min_value, vmax=max_value)
 
                 axs[i, j].set_xticks([])
                 axs[i, j].set_yticks([])

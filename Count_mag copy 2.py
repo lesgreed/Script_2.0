@@ -17,8 +17,8 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
     from matplotlib.patches import Circle
 
     # Центр круга
-    center_R = np.mean(R_inside)
-    center_Z = np.mean(Z_inside)
+    center_R = np.mean(R_inside)-35
+    center_Z = np.mean(Z_inside)+20
     center = np.array([center_R, center_Z])
     radius = circle_radius
 
@@ -74,10 +74,12 @@ def calculate_relative_differences_1d(J_vals, coords_3d):
         for j, neighbor_val in enumerate(J_vals):
             if i == j or np.isnan(neighbor_val) or neighbor_val == 0:
                 continue
-            diff = np.abs(center - neighbor_val) / np.abs(center)
+            diff =100* np.abs(center - neighbor_val) / np.abs(center)
             dist = np.linalg.norm(center_coords - coords_3d[j])
             local_diffs.append(diff)
             local_dists.append(dist)
+            
+
 
         if local_diffs:
             min_diffs.append(np.min(local_diffs))
@@ -153,7 +155,7 @@ def calculate_J_0_for_point(point, config, B):
 
       B_max_particle = B
 
-    
+
 
       if B_max_particle<B_max_point and B_max_particle>B_value and s0<1:
                rhs_B_forward = lambda l, y: eq.get_B(y)[1]/ np.linalg.norm(eq.get_B(y)[1])
@@ -281,12 +283,12 @@ if __name__ == "__main__":
     B_array_2, B_vec_array, S_array, B_max_array_2 = MagField(points_inside/100, b4)
     
     
-    #minim = max(np.nanmax(B_array_1), np.nanmax(B_array_2))
-    #maxim = min(np.nanmin(B_max_array_1), np.nanmin(B_max_array_2))
-    #print(np.nanmax(B_array_1))
-    #print(np.nanmax(B_array_2))
-    #print(np.nanmin(B_max_array_1))
-    #print(np.nanmin(B_max_array_2))
+    minim = max(np.nanmax(B_array_1), np.nanmax(B_array_2))
+    maxim = min(np.nanmin(B_max_array_1), np.nanmin(B_max_array_2))
+    print(np.nanmax(B_array_1))
+    print(np.nanmax(B_array_2))
+    print(np.nanmin(B_max_array_1))
+    print(np.nanmin(B_max_array_2))
 
 
     B = (np.nanmax(B_array_1) + np.nanmin(B_max_array_1)) / 2
@@ -312,8 +314,7 @@ if __name__ == "__main__":
     #J_0_grid_2[mask] = res_2
 
 
-    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=100, circle_radius=5)
- 
+    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=1000, circle_radius=1 )
 
 
     X_circ, Y_circ, Z_circ = [], [], []
@@ -325,13 +326,9 @@ if __name__ == "__main__":
     points_circ = np.vstack((X_circ, Y_circ, Z_circ)).T
 
     # === 2. Считаем B и J_0 внутри круга ===
-    B = (np.nanmax(B_array_1) + np.nanmin(B_max_array_1)) / 2
     res_1 = J_0_calculate(points_circ / 100, b0, B)
     res_2 = J_0_calculate(points_circ / 100, b4, B)
 
-    # Очищаем от нулей
-    res_1 = np.where(np.array(res_1) == 0, np.nan, res_1)
-    res_2 = np.where(np.array(res_2) == 0, np.nan, res_2)
 
     # === 3. Переводим в сетки и считаем отличия ===
     res_1_grid = np.full(R_grid_local.shape, np.nan)
@@ -342,8 +339,11 @@ if __name__ == "__main__":
     res_2_grid[inside_mask.reshape(R_grid_local.shape)] = res_2
 
         # Используем обновлённую функцию
+    print(res_1)
+    print(res_2)
     min_diff_1, max_diff_1, dists_1 = calculate_relative_differences_1d(np.array(res_1), coords_3d)
     min_diff_2, max_diff_2, dists_2 = calculate_relative_differences_1d(np.array(res_2), coords_3d)
+
 
     # === 5. Статистика расстояний ===
     print("Минимальное расстояние между точками:", np.nanmin(dists_1))
@@ -353,15 +353,24 @@ if __name__ == "__main__":
     # === 4. Гистограмма различий ===
     import matplotlib.pyplot as plt
 
-    plt.figure(figsize=(10, 5))
-    plt.hist(max_diff_1, bins=30, alpha=0.6, label='Config 1: w7x-sc1.bc', color='blue')
-    plt.hist(max_diff_2, bins=30, alpha=0.6, label='Config 2: w7x-sc1_ecrh_beta=0.04.bc', color='orange')
-    plt.xlabel('Максимальное относительное отклонение от соседей')
-    plt.ylabel('Количество точек')
-    plt.title('Сравнение отклонений J₀ для двух конфигураций')
-    plt.legend()
-    plt.grid(True)
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5))  # 1 строка, 2 столбца
+
+    # Первая гистограмма
+    axs[0].hist(res_1, bins=30, alpha=0.6, color='blue')
+    axs[0].set_title('Config 1: w7x-sc1.bc')
+    axs[0].set_xlabel('J_0')  # можешь заменить на нужное название
+    axs[0].set_ylabel('Y')  # и это тоже
+    axs[0].grid(True)
+
+    # Вторая гистограмма
+    axs[1].hist(res_2, bins=40, alpha=0.6, color='orange')  # предполагаем, что у тебя есть res_2
+    axs[1].set_title('Config 2: w7x-sc1_ecrh_beta=0.04.bc')
+    axs[1].set_xlabel('J_0')
+    axs[1].set_ylabel('Y')
+    axs[1].grid(True)
+
     plt.tight_layout()
     plt.show()
+
 
 
