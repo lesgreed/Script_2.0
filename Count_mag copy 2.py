@@ -17,8 +17,10 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
     from matplotlib.patches import Circle
 
     # Центр круга
-    center_R = np.mean(R_inside)-35
-    center_Z = np.mean(Z_inside)+20
+    center_R = np.mean(R_inside)
+    center_Z = np.mean(Z_inside)
+    print(center_R, Phi, center_Z)
+    print("hi", inverse_transform(center_R, center_Z, Phi))
     center = np.array([center_R, center_Z])
     radius = circle_radius
 
@@ -314,7 +316,7 @@ if __name__ == "__main__":
     #J_0_grid_2[mask] = res_2
 
 
-    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=1000, circle_radius=1 )
+    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=500, circle_radius=5 )
 
 
     X_circ, Y_circ, Z_circ = [], [], []
