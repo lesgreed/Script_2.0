@@ -405,7 +405,7 @@ class App(ctk.CTk):
         try:
             new_value = float(self.delta_J_entry.get())
             self.delta_J_0 = new_value
-            print(f"Delta s updated to: {self.delta_J_0}")
+            print(f"Delta J0 updated to: {self.delta_J_0}")
 
 
             self.textbox.insert("end", f"\n[{timestamp}]: ΔJ0 updated to: {self.delta_J_0}\n")
