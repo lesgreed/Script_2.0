@@ -17,8 +17,8 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
     from matplotlib.patches import Circle
 
     # Центр круга
-    center_R = np.mean(R_inside)
-    center_Z = np.mean(Z_inside)
+    center_R = np.mean(R_inside)-20
+    center_Z = np.mean(Z_inside)-20
     print(center_R, Phi, center_Z)
     print("hi", inverse_transform(center_R, center_Z, Phi))
     center = np.array([center_R, center_Z])
@@ -43,11 +43,11 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
     # Контуры
     contour1 = axes[0].contour(grid_R, grid_Z, B_grid_1, levels=20, cmap="plasma")
     axes[0].plot(R_phi, Z_phi, color="red", linewidth=0.5)
-    axes[0].set_title('w7x-sc1.bc')
+    axes[0].set_title('beta=0.txt')
 
     contour3 = axes[1].contour(grid_R, grid_Z, B_grid_2, levels=20, cmap="plasma")
     axes[1].plot(R_phi, Z_phi, color="red", linewidth=0.5)
-    axes[1].set_title('w7x-sc1_ecrh_beta=0.04.bc')
+    axes[1].set_title('beta=2.txt')
 
     # Круг на графиках 0 и 2
     for ax in [axes[0], axes[1]]:
@@ -127,7 +127,7 @@ def calculate_J_0_for_point(point, config, B):
       point = np.array(point, dtype=np.float64)
 
       #config
-      mconf_config = {'B0': 2.525,
+      mconf_config = {'B0': 2.911,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-10} #trancation of mn harmonics
@@ -205,7 +205,7 @@ def MagField(points, t):
     try:
         os.chdir('J_0_test')
         mconf_config = {
-            'B0': 2.525,
+            'B0': 2.911,
             'B0_angle': 0.0,
             'accuracy': 1e-10, 
             'truncation': 1e-10
@@ -279,8 +279,8 @@ if __name__ == "__main__":
     points_inside = np.vstack((X_inside, Y_inside, Z_inside_3D)).T
 
 
-    b0 = 'w7x-sc1.bc'
-    b4 = 'w7x-sc1_ecrh_beta=0.04.bc'
+    b0 = 'beta=0.txt'
+    b4 = 'beta=2.txt'
     B_array_1, B_vec_array, S_array, B_max_array_1 = MagField(points_inside/100, b0)
     B_array_2, B_vec_array, S_array, B_max_array_2 = MagField(points_inside/100, b4)
     
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     #J_0_grid_2[mask] = res_2
 
 
-    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=500, circle_radius=5 )
+    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=500, circle_radius=1 )
 
 
     X_circ, Y_circ, Z_circ = [], [], []
@@ -359,14 +359,14 @@ if __name__ == "__main__":
 
     # Первая гистограмма
     axs[0].hist(res_1, bins=30, alpha=0.6, color='blue')
-    axs[0].set_title('Config 1: w7x-sc1.bc')
+    axs[0].set_title('Config 1: beta=0.txt')
     axs[0].set_xlabel('J_0')  # можешь заменить на нужное название
     axs[0].set_ylabel('Y')  # и это тоже
     axs[0].grid(True)
 
     # Вторая гистограмма
     axs[1].hist(res_2, bins=40, alpha=0.6, color='orange')  # предполагаем, что у тебя есть res_2
-    axs[1].set_title('Config 2: w7x-sc1_ecrh_beta=0.04.bc')
+    axs[1].set_title('Config 2: beta=2.txt')
     axs[1].set_xlabel('J_0')
     axs[1].set_ylabel('Y')
     axs[1].grid(True)

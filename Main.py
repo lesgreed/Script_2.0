@@ -516,8 +516,8 @@ class App(ctk.CTk):
                 One_Matr = Matr[i, j] 
                 max_value =np.max(MATRIX)
                 #max_value = 5.0
-                im = axs[i, j].imshow(One_Matr, cmap='gist_ncar', origin='upper', aspect='auto', vmin=min_value, vmax=max_value)
-
+                im = axs[i, j].imshow(One_Matr, cmap='jet', origin='upper', aspect='auto', vmin=min_value, vmax=max_value)
+                #gist_ncar
                 axs[i, j].set_xticks([])
                 axs[i, j].set_yticks([])
 
@@ -791,7 +791,7 @@ class calculus():
       os.chdir('J_0_test')
 
 
-      mconf_config = {'B0': 2.525,
+      mconf_config = {'B0': 2.911,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, 
                 'truncation': 1e-10} 
@@ -859,7 +859,7 @@ class calculus():
       point = np.array(point, dtype=np.float64)
 
       #config
-      mconf_config = {'B0': 2.525,
+      mconf_config = {'B0': 2.911,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-10} #trancation of mn harmonics
