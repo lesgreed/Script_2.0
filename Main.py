@@ -213,12 +213,12 @@ class App(ctk.CTk):
 
 
         # Label for Delta J with Greek symbol
-        self.delta_J_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="ΔJ0:", anchor="w")
+        self.delta_J_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="ΔJ0 %:", anchor="w")
         self.delta_J_label.grid(row=4, column=1, padx=20, pady=(10, 0), sticky="w")
 
         # Entry for Delta J value
         self.delta_J_entry = ctk.CTkEntry(self.tabview.tab("Setting"), width=100)
-        self.delta_J_entry.insert(0, str(self.delta_J_0))  # Set initial value
+        self.delta_J_entry.insert(0, str(self.delta_J_0*100))  # Set initial value
         self.delta_J_entry.grid(row=5, column=1, padx=20, pady=(10, 20), sticky="w")
 
         # Bind the entry to update value automatically when changed
@@ -404,8 +404,8 @@ class App(ctk.CTk):
         timestamp = datetime.now().strftime("%H:%M:%S")
         try:
             new_value = float(self.delta_J_entry.get())
-            self.delta_J_0 = new_value
-            print(f"Delta s updated to: {self.delta_J_0}")
+            self.delta_J_0 = new_value/100
+            print(f"Delta J updated to: {self.delta_J_0}")
 
 
             self.textbox.insert("end", f"\n[{timestamp}]: ΔJ0 updated to: {self.delta_J_0}\n")
@@ -507,7 +507,7 @@ class App(ctk.CTk):
                  MATRIX= np.transpose(MATRIX)
                  filtered_values = MATRIX[MATRIX != -np.inf]
                  min_value = np.min(filtered_values) if filtered_values.size > 0 else -9
-                 #min_value = 2.0
+                 min_value = 3.0
                  color = np.append(color, min_value)
                  Matr[i, j]  = MATRIX
         for i in range(num_arrays):
@@ -515,7 +515,7 @@ class App(ctk.CTk):
 
                 One_Matr = Matr[i, j] 
                 max_value =np.max(MATRIX)
-                #max_value = 5.0
+                max_value = 4.0
                 im = axs[i, j].imshow(One_Matr, cmap='jet', origin='upper', aspect='auto', vmin=min_value, vmax=max_value)
                 #gist_ncar
                 axs[i, j].set_xticks([])
@@ -614,6 +614,7 @@ class App(ctk.CTk):
             #==================================NOT free=================================================
             def relative_difference(a, b):
                 numerator = np.abs(a - b)
+
                 denominator = np.maximum(np.maximum(np.abs(a), np.abs(b)), 1e-12)
                 return numerator / denominator
 
@@ -934,7 +935,7 @@ class calculus():
                  backward_integrand          
                  ])
                
-               J_0_map[i, j] = self.trapezoidal_integral(complete_integrand, complete_path)*1e6
+               J_0_map[i, j] = self.trapezoidal_integral(complete_integrand, complete_path)*1e7
               else:
                J_0_map[i, j] = 0.0     
 

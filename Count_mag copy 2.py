@@ -17,8 +17,8 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
     from matplotlib.patches import Circle
 
     # Центр круга
-    center_R = np.mean(R_inside)-20
-    center_Z = np.mean(Z_inside)-20
+    center_R = np.mean(R_inside)-25
+    center_Z = np.mean(Z_inside)-10
     print(center_R, Phi, center_Z)
     print("hi", inverse_transform(center_R, center_Z, Phi))
     center = np.array([center_R, center_Z])
@@ -43,11 +43,11 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
     # Контуры
     contour1 = axes[0].contour(grid_R, grid_Z, B_grid_1, levels=20, cmap="plasma")
     axes[0].plot(R_phi, Z_phi, color="red", linewidth=0.5)
-    axes[0].set_title('beta=0.txt')
+    axes[0].set_title('beta=1.txt')
 
     contour3 = axes[1].contour(grid_R, grid_Z, B_grid_2, levels=20, cmap="plasma")
     axes[1].plot(R_phi, Z_phi, color="red", linewidth=0.5)
-    axes[1].set_title('beta=2.txt')
+    axes[1].set_title('beta=0.65.txt')
 
     # Круг на графиках 0 и 2
     for ax in [axes[0], axes[1]]:
@@ -279,8 +279,8 @@ if __name__ == "__main__":
     points_inside = np.vstack((X_inside, Y_inside, Z_inside_3D)).T
 
 
-    b0 = 'beta=0.txt'
-    b4 = 'beta=2.txt'
+    b0 = 'beta=1.txt'
+    b4 = 'beta=0.65.txt'
     B_array_1, B_vec_array, S_array, B_max_array_1 = MagField(points_inside/100, b0)
     B_array_2, B_vec_array, S_array, B_max_array_2 = MagField(points_inside/100, b4)
     
@@ -293,7 +293,7 @@ if __name__ == "__main__":
     print(np.nanmin(B_max_array_2))
 
 
-    B = (np.nanmax(B_array_1) + np.nanmin(B_max_array_1)) / 2
+    B = 2.90
     print(B)
 
 
@@ -355,21 +355,37 @@ if __name__ == "__main__":
     # === 4. Гистограмма различий ===
     import matplotlib.pyplot as plt
 
-    fig, axs = plt.subplots(1, 2, figsize=(12, 5))  # 1 строка, 2 столбца
+    fig, axs = plt.subplots(2, 2, figsize=(12, 5))  # 1 строка, 2 столбца
 
     # Первая гистограмма
-    axs[0].hist(res_1, bins=30, alpha=0.6, color='blue')
-    axs[0].set_title('Config 1: beta=0.txt')
-    axs[0].set_xlabel('J_0')  # можешь заменить на нужное название
-    axs[0].set_ylabel('Y')  # и это тоже
-    axs[0].grid(True)
+    axs[0,0].hist(res_1, bins=30, alpha=0.6, color='blue')
+    axs[0,0].set_title('Config 1: beta=1.txt')
+    axs[0,0].set_xlabel('J_0')  # можешь заменить на нужное название
+    axs[0,0].set_ylabel('Y')  # и это тоже
+    axs[0,0].grid(True)
 
     # Вторая гистограмма
-    axs[1].hist(res_2, bins=40, alpha=0.6, color='orange')  # предполагаем, что у тебя есть res_2
-    axs[1].set_title('Config 2: beta=2.txt')
-    axs[1].set_xlabel('J_0')
-    axs[1].set_ylabel('Y')
-    axs[1].grid(True)
+    axs[0,1].hist(res_2, bins=40, alpha=0.6, color='orange')  # предполагаем, что у тебя есть res_2
+    axs[0,1].set_title('Config 2: beta=0.65.txt')
+    axs[0,1].set_xlabel('J_0')
+    axs[0,1].set_ylabel('Y')
+    axs[0,1].grid(True)
+    
+        # Первая гистограмма
+    axs[1,0].hist(min_diff_1, bins=30, alpha=0.6, color='blue')
+    axs[1,0].set_title('Config 1: beta=1.txt')
+    axs[1,0].set_xlabel('J_0 %')  # можешь заменить на нужное название
+    axs[1,0].set_ylabel('Y')  # и это тоже
+    axs[1,0].grid(True)
+
+    # Вторая гистограмма
+    axs[1,1].hist(min_diff_2, bins=40, alpha=0.6, color='orange')  # предполагаем, что у тебя есть res_2
+    axs[1,1].set_title('Config 2: beta=0.65.txt')
+    axs[1,1].set_xlabel('J_0 %')
+    axs[1,0].set_ylabel('Y')
+    axs[1,1].grid(True)
+    
+    
 
     plt.tight_layout()
     plt.show()
