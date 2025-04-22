@@ -57,14 +57,15 @@ class App(ctk.CTk):
         self.scale = 10  
         self.delta_s = 0.05
         self.delta_J_0 = 0.005 
+        self.B_0_set = 2.520
         self.current_graph = None
         self.all_results = []
         self.data_wf = []
         self.Name_Ports = ['2_1_AEA', '2_1_AEM','2_1_AET', '2_1_AEA', '2_1_AEM','2_1_AET']
         self.Name_NBI = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
         self.results_folder = "Results"  
-        self.conf_folder =os.path.join(curr_directory, "J_0_test")
-        self.conf = 'beta=0.txt'
+        self.conf_folder =os.path.join(curr_directory, "config_files")
+        self.conf = os.path.join(self.conf_folder, "beta=0.txt")
         self.diagnostics = ['FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA']
 
   
@@ -224,6 +225,24 @@ class App(ctk.CTk):
         # Bind the entry to update value automatically when changed
         self.delta_J_entry.bind("<Return>", self.update_delta_J)
 
+
+
+         # Label for B_0set with Greek symbol
+        self.B_0_label = ctk.CTkLabel(self.tabview.tab("Setting"), text="B0:", anchor="w")
+        self.B_0_label.grid(row=6, column=0, padx=20, pady=(10, 0), sticky="w")
+
+        # Entry for B_0set value
+        self.B_0_entry = ctk.CTkEntry(self.tabview.tab("Setting"), width=100)
+        self.B_0_entry.insert(0, str(self.B_0_set))  # Set initial value
+        self.B_0_entry.grid(row=7, column=0, padx=20, pady=(10, 20), sticky="w")
+
+        # Bind the entry to update value automatically when changed
+        self.B_0_entry.bind("<Return>", self.update_B_0_sett)
+
+
+
+
+
         # Label to display the current value of the second slider
         self.second_value_label = ctk.CTkLabel(self.tabview.tab("Setting"), text=str(self.scale))
         self.second_value_label.grid(row=3, column=1, padx=(10, 20), pady=(10, 20), sticky="w")
@@ -234,30 +253,32 @@ class App(ctk.CTk):
         self.file_list = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.get_result_files_conf(), command=self.select_file_conf)
         self.file_list.grid(row=5, column=0, padx=20, pady=(0, 20), sticky="w")
 
+        self.load_button_config = ctk.CTkButton(self.tabview.tab("Tools"), text="Load Configuration", command=self.load_config)
+        self.load_button_config.grid(row=6, column=0, padx=20, pady=5, sticky="w")
+
 
         self.file_list_label = ctk.CTkLabel(self.tabview.tab("Tools"), text="Results", anchor="w")
-        self.file_list_label.grid(row=6, column=0, padx=20, pady=(10, 0), sticky="w")
+        self.file_list_label.grid(row=7, column=0, padx=20, pady=(10, 0), sticky="w")
         
         self.file_list = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.get_result_files(), command=self.select_file)
-        self.file_list.grid(row=7, column=0, padx=20, pady=(0, 20), sticky="w")
+        self.file_list.grid(row=8, column=0, padx=20, pady=(0, 20), sticky="w")
 
 
         self.save_button = ctk.CTkButton(self.tabview.tab("Tools"), text="Save data", command=self.save_results)
-        self.save_button.grid(row=8, column=0, padx=20, pady=5, sticky="w")
+        self.save_button.grid(row=9, column=0, padx=20, pady=5, sticky="w")
         
         self.load_button = ctk.CTkButton(self.tabview.tab("Tools"), text="Load data", command=self.load_results)
-        self.load_button.grid(row=9, column=0, padx=20, pady=5, sticky="w")
+        self.load_button.grid(row=10, column=0, padx=20, pady=5, sticky="w")
 
         # Canvas for displaying the graph
-# Создаем холст для графика в колонке 3
+
         self.graph_canvas = ctk.CTkCanvas(self, bg="white")
         self.graph_canvas.grid(row=0, column=3, rowspan=999, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
-# Делаем третью колонку растягивающейся
-        self.grid_columnconfigure(3, weight=1)  # 3-я колонка растягивается
+        self.grid_columnconfigure(3, weight=1)  
 
-# Делаем все строки растягивающимися
-        for i in range(3):  # Или больше, если у тебя много строк
+
+        for i in range(3): 
             self.grid_rowconfigure(i, weight=1)
 
     #--------------------------------------------------------------------------------------------------------------------------------------------- 
@@ -271,7 +292,13 @@ class App(ctk.CTk):
     #-------------------------------------------------------------Save data-------------------------------------------------------------------    
     def save_results(self):
         timestamp = datetime.now().strftime("%H%M%S")
-        file_name = f"Results_{self.angle}_{self.scale}_{self.conf[:-3]}_{timestamp}.json"  
+
+
+            
+        config_name = os.path.splitext(os.path.basename(self.conf))[0]
+        now = datetime.now()
+        date_str = now.strftime("%d" + "d%m" + "m%y" + "y_%H" + "h%M" + "m")
+        file_name = f"Res_{self.angle}x{self.scale}_{config_name}_{date_str}_{self.B_0_set}.json"  
         file_path = os.path.join(self.results_folder, file_name)
 
         try:
@@ -352,8 +379,24 @@ class App(ctk.CTk):
         return files
     
     def select_file_conf(self, file_name):
-        self.conf = file_name
+        self.conf =  os.path.join(self.conf_folder, file_name)
         print(self.conf)
+    
+
+
+    def load_config(self):
+        file_path = filedialog.askopenfilename(
+            initialdir=self.conf_folder,
+            filetypes=[("TXT files", "*.txt"), ("BC files", "*.bc")]
+        )
+
+        if file_path:
+            print(f"[INFO] File selected: {file_path}")
+            self.conf = file_path  # Save the selected path if needed
+            # You can add further parsing or processing here
+        else:
+            print("[INFO] File selection canceled.")
+
     #------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -364,7 +407,7 @@ class App(ctk.CTk):
     #-----------------------------------------------Pre_calculate------------------------------------------------------------------------------
     def pre_calculate(self):
         if len(self.all_results) ==0:
-         Result_array = self.data_instance.data_already_input(self.scale,  self.Name_Ports,   self.Name_NBI, self.angle, self.conf)
+         Result_array = self.data_instance.data_already_input(self.scale,  self.Name_Ports,   self.Name_NBI, self.angle, self.conf, self.B_0_set)
          self.all_results = Result_array
          self.data_wf = self.all_results[10][0]
         else:
@@ -405,10 +448,18 @@ class App(ctk.CTk):
         try:
             new_value = float(self.delta_J_entry.get())
             self.delta_J_0 = new_value/100
-            print(f"Delta J updated to: {self.delta_J_0}")
-
-
+            print(f"Delta J updated to: {self.delta_J_0}")        
             self.textbox.insert("end", f"\n[{timestamp}]: ΔJ0 updated to: {self.delta_J_0}\n")
+        except ValueError:
+            self.textbox.insert("end", f"\n[{timestamp}]: Invalid input. Please enter a numerical value.\n")
+
+    def update_B_0_sett(self, event):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        try:
+            new_value = float(self.B_0_entry.get())
+            self.B_0_set = new_value
+            print(f"B0 updated to: {self.B_0_set}")        
+            self.textbox.insert("end", f"\n[{timestamp}]: B0 updated to: {self.B_0_set}\n")
         except ValueError:
             self.textbox.insert("end", f"\n[{timestamp}]: Invalid input. Please enter a numerical value.\n")
     #-----------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -452,7 +503,7 @@ class App(ctk.CTk):
 
     #---------------------------------------Add new matrxi to grid ----------------------------------------------------
     def create_result_array_for_port(self, selected_nbi, selected_port):
-        data = self.data_instance.data_nbi_ports(selected_nbi, selected_port, self.angle, self.scale, self.conf)
+        data = self.data_instance.data_nbi_ports(selected_nbi, selected_port, self.angle, self.scale, self.conf, self.B_0_set)
 
         for i in range(len(data)):
             self.all_results[i].append(data[i])
@@ -491,8 +542,13 @@ class App(ctk.CTk):
         self.create_result_array_for_port(selected_nbi, selected_port)
 
         self.generate_and_show_graph()
-        
-        
+
+
+ 
+
+
+
+   
     def draw_graph_on_canvas(self, Result_for_NBI_Port):
         num_arrays = len(Result_for_NBI_Port)
         color = np.array([])
@@ -501,25 +557,46 @@ class App(ctk.CTk):
         # Create a matplotlib figure
         fig, axs = plt.subplots(num_arrays, num_arrays, figsize=(10, 10))
 
-        for i in range(num_arrays):
-            for j in range(num_arrays):
-                 MATRIX = self.sum(Result_for_NBI_Port[i], Result_for_NBI_Port[j], i, j)
-                 MATRIX= np.transpose(MATRIX)
-                 filtered_values = MATRIX[MATRIX != -np.inf]
-                 min_value = np.min(filtered_values) if filtered_values.size > 0 else -9
-                 min_value = 0
-                 color = np.append(color, min_value)
-                 Matr[i, j]  = MATRIX
-        for i in range(num_arrays):
-            for j in range(num_arrays):
+        args_list = [(i, j, Result_for_NBI_Port[i], Result_for_NBI_Port[j]) 
+                 for i in range(num_arrays) for j in range(num_arrays)]
 
-                One_Matr = Matr[i, j] 
-                max_value =np.max(MATRIX)
-                max_value = 4.0
-                im = axs[i, j].imshow(One_Matr, cmap='jet', origin='upper', aspect='auto', vmin=min_value, vmax=max_value)
-                #gist_ncar
-                axs[i, j].set_xticks([])
-                axs[i, j].set_yticks([])
+
+        all_results_list = [self.all_results] * len(args_list)
+        delta_J_0_list = [self.delta_J_0] * len(args_list)
+        delta_s_list = [self.delta_s] * len(args_list)
+
+        with ProcessPoolExecutor() as executor:
+
+         results = list(executor.map(
+                        self.Bget.compute_matrix,  
+                        args_list,                 
+                        all_results_list,        
+                        delta_J_0_list,           
+                        delta_s_list              
+                        ))
+
+        for i, j, MATRIX, min_value in results:
+         Matr[i, j] = MATRIX
+         color = np.append(color, min_value)
+        min_value = 0.0
+        max_value = 4.0
+    
+        def plot_subplot(i, j, Matr, axs, min_value, max_value):
+            One_Matr = Matr[i, j]
+            im = axs[i, j].imshow(One_Matr, cmap='jet', origin='upper', aspect='auto', vmin=min_value, vmax=max_value)
+            axs[i, j].set_xticks([])
+            axs[i, j].set_yticks([])
+            return im
+
+        ims = []
+        with ThreadPoolExecutor() as executor:
+            results = executor.map(lambda args: plot_subplot(*args), 
+                           [(i, j, Matr, axs, min_value, max_value) for i in range(num_arrays) for j in range(num_arrays)])
+
+    
+            # Optionally, wait for all futures to complete
+            for im in results:
+                ims.append(im)
 
         plt.subplots_adjust(wspace=0, hspace=0)
         
@@ -527,7 +604,7 @@ class App(ctk.CTk):
         # Add colorbar to the last subplot
         cax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [x, y, width, height]
         
-        plt.colorbar(im, cax=cax)
+        plt.colorbar(ims[-1], cax=cax)
 
 
         for i in range(num_arrays):
@@ -544,8 +621,13 @@ class App(ctk.CTk):
                name = 'C'
             axs[num_arrays-1, i].set_xlabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
             axs[i, 0].set_ylabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
+    
+        config_name = os.path.splitext(os.path.basename(self.conf))[0]
+        now = datetime.now()
+        date_str = now.strftime("%d" + "d%m" + "m%y" + "y_%H" + "h%M" + "m")
 
-        file_name = f"Results_{self.angle}_{self.scale}_{self.conf[:-3]}.png"  
+
+        file_name = f"Res_{self.angle}_{self.scale}_{config_name}_{date_str}_{self.B_0_set}.png"  
         fig.savefig(f"Results/{file_name}", dpi=2000, bbox_inches='tight')
 
         #plt.title('FIDA')
@@ -560,97 +642,6 @@ class App(ctk.CTk):
         # Update the current graph reference
         self.current_graph = canvas
 
-
-    def sum(self, array_1, array_2, first_nbi_index, second_nbi_index):
-     MATRIX = np.zeros((len(array_1), len(array_2)))
-
-     
-     x_ev = np.linspace(10, 100, 300)
-     y_ev = np.linspace(-100, 100, 300) / 2.5
-     x_ev, y_ev = np.meshgrid(x_ev, y_ev)
-
-     ratio = np.abs(x_ev / y_ev)
-
-     B_value_1 = self.all_results[3][first_nbi_index]
-     B_value_2 = self.all_results[3][second_nbi_index]
-     B_max_array_1 = self.all_results[8][first_nbi_index]
-     B_max_array_2 = self.all_results[8][second_nbi_index]
-     s_1_array = self.all_results[7][first_nbi_index]
-     s_2_array = self.all_results[7][second_nbi_index]
-     J_0_array_1 = np.array(self.all_results[9][first_nbi_index])  
-     J_0_array_2 = np.array(self.all_results[9][second_nbi_index])  
-    
-     for i in range(len(array_1)):
-        for j in range(len(array_2)):
-
-            B_max_i = B_max_array_1[i]
-            B_max_j = B_max_array_2[j]
-            s_1_i = s_1_array[i]
-            s_2_j = s_2_array[j]
-
-            mask_i = (ratio > B_max_i)
-            mask_j = (ratio > B_max_j)
-
-            mask_i_val = (ratio> B_value_1[i])
-            mask_j_val = (ratio> B_value_2[j])
-            
-            #free particles 
-            both_above_B_mask = mask_i & mask_j
-
-            #not free
-            both_below_B_mask = np.logical_not(mask_i) & np.logical_not(mask_j) & mask_i_val & mask_j_val
-
-            #or or 
-            cross_check_mask = (mask_i & np.logical_not(mask_j)) | (np.logical_not(mask_i) & mask_j)
-
-
-            
-            
-            
-            
-            #==================================NOT free=================================================
-            def relative_difference(a, b):
-                numerator = np.abs(a - b)
-            
-                denominator = np.maximum(np.maximum(np.abs(a), np.abs(b)), 1e-13)
-                return numerator / denominator
-            nan_mask = np.logical_or(np.isnan(J_0_array_1[i]), np.isnan(J_0_array_2[j])) 
-            equal_mask_J_0 = np.where(nan_mask, True, relative_difference(J_0_array_1[i], J_0_array_2[j])<self.delta_J_0)
-            
-            
-            #==================================free=================================================
-            equal_mask_s = (np.abs(np.abs(s_1_i / s_2_j)-1) <=  self.delta_s)
-            
-
-            #==================================forbidden======================================
-            mask_no_accept =  np.logical_not(mask_i_val) | np.logical_not(mask_j_val) 
-
-            #free diff
-            mask_condition_1 = both_above_B_mask  & np.logical_not(equal_mask_s)
-            #free same
-            mask_condition_2 = both_above_B_mask & equal_mask_s
-            #or or 
-            mask_condition_4 = cross_check_mask
-            #not free same 
-            mask_condition_5 = both_below_B_mask & equal_mask_J_0
-            #not free diff 
-            mask_condition_6 = both_below_B_mask & np.logical_not(equal_mask_J_0)
-            #f
-            mask_condition_7 = mask_no_accept
-            
-            #results
-            product = array_1[i] * array_2[j]
-            #mask
-            product[mask_condition_1] = 0
-            product[mask_condition_4] = 0
-            product[mask_condition_6] = 0
-            product[mask_condition_7] = 0
-
-            sum_product = np.sum(product)
-            element = np.log10(np.where(sum_product > 0, sum_product, 1e-8))
-            MATRIX[i, j] = np.where(element>-8, element, -np.inf)
-
-     return MATRIX
 
 
 
@@ -706,11 +697,11 @@ class Data:
         return valid_indices, extreme_points_1, extreme_points_2, valid_port_names
     
 
-    def data_already_input(self, scale, Name_Ports, Name_NBI, angle, config):
+    def data_already_input(self, scale, Name_Ports, Name_NBI, angle, config, B_0):
 
         data_B = [[] for _ in range(11)]
         for i in range(len(Name_Ports)):
-           data_i = self.data_nbi_ports(Name_NBI[i], Name_Ports[i], angle, scale, config)
+           data_i = self.data_nbi_ports(Name_NBI[i], Name_Ports[i], angle, scale, config,B_0)
            
            for i in range(len(data_i)):
                data_B[i].append(data_i[i])
@@ -723,7 +714,7 @@ class Data:
     
 
 
-    def data_nbi_ports(self, nbi, port, angle, scale, config):
+    def data_nbi_ports(self, nbi, port, angle, scale, config, B_0):
         index = self.P_name.index(port)
         P_1_start = [self.P_1[0][index], self.P_1[1][index], self.P_1[2][index]]
         P_2_end = [self.new_P_1[0][index], self.new_P_1[1][index], self.new_P_1[2][index]]
@@ -735,7 +726,7 @@ class Data:
         valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
             P_1_start, index_NBI, P_2_end, self.new_NBI_start, self.new_NBI_end, self.surface, float(angle))
 
-        points, B_array, B_vec_array, S_array, B_max_array= self.Bget.gets(np.array(extreme_points_1[0], dtype=np.float64), np.array(extreme_points_2[0], dtype=np.float64), scale, config)
+        points, B_array, B_vec_array, S_array, B_max_array= self.Bget.gets(np.array(extreme_points_1[0], dtype=np.float64), np.array(extreme_points_2[0], dtype=np.float64), scale, config, B_0)
 
         angles, angles_vec_B, J_0_array=[],[], []
         for j in range(len(points)):
@@ -744,7 +735,7 @@ class Data:
                 vector_AB = np.array(P_2_end) - np.array(P_1_start)  
                 angle_B = geo.check_angle_2_vec(vector_AB/100, B_vec_array[j])
                 angles_vec_B.append(angle_B)
-        J_0_array = self.Bget.J_0_calculate(points, config)
+        J_0_array = self.Bget.J_0_calculate(points, config, B_0)
 
         return [nbi, port, points, B_array, angles, B_vec_array, angles_vec_B,S_array, B_max_array, J_0_array] 
 
@@ -784,7 +775,7 @@ class calculus():
     def __init__(self):
          lll=0
 
-    def gets(self, point1, point2, scale, config):
+    def gets(self, point1, point2, scale, config, B_0):
       point1, point2 = point1 / 100, point2 / 100
       points = np.linspace(point1, point2, scale)
 
@@ -792,7 +783,7 @@ class calculus():
       os.chdir('J_0_test')
 
 
-      mconf_config = {'B0': 2.520,
+      mconf_config = {'B0': B_0,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, 
                 'truncation': 1e-10} 
@@ -843,26 +834,28 @@ class calculus():
 
 
     #------------------------------------------------------------------------------J_0 calc-------------------------------------------------------------------------------------------------
-    def J_0_calculate(self, points,config):
+    def J_0_calculate(self, points,config, B_0):
      points = np.array(points, dtype=np.float64)
      previous_directory = os.getcwd()
      os.chdir('J_0_test')
     
      with ProcessPoolExecutor() as executor:
-        results = list(tqdm(executor.map(self.calculate_J_0_for_point, points, [config] * len(points)), total=len(points)))
+        results = list(tqdm(executor.map(self.calculate_J_0_for_point, points, [config] * len(points), [B_0]*len(points)), total=len(points)))
      print(config)
      os.chdir(previous_directory)
      return results
 
-    def calculate_J_0_for_point(self, point, config):
+    def calculate_J_0_for_point(self, point, config, B_0):
       #data type
       point = np.array(point, dtype=np.float64)
 
       #config
-      mconf_config = {'B0': 2.520,
+      mconf_config = {'B0': B_0,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-10} #trancation of mn harmonics
+      
+
       eq = mconf.Mconf_equilibrium(config,mconf_config=mconf_config)
       
 
@@ -946,6 +939,111 @@ class calculus():
       segment_integrals = ds * avg_f
       integral = np.sum(segment_integrals)
       return integral
+    
+
+
+    def compute_matrix(self, args, all_results, delta_J, delta_s):
+        i, j, port_i, port_j = args
+        matrix = self.sum(port_i, port_j, i, j, all_results, delta_J, delta_s)
+        matrix = np.transpose(matrix)
+        filtered = matrix[matrix != -np.inf]
+        min_value = np.min(filtered) if filtered.size > 0 else 0
+        return (i, j, matrix, min_value)
+
+
+
+
+    def sum(self, array_1, array_2, first_nbi_index, second_nbi_index, all_results, delta_J, delta_s):
+     MATRIX = np.zeros((len(array_1), len(array_2)))
+
+     
+     x_ev = np.linspace(10, 100, 300)
+     y_ev = np.linspace(-100, 100, 300) / 2.5
+     x_ev, y_ev = np.meshgrid(x_ev, y_ev)
+
+     ratio = np.abs(x_ev / y_ev)
+
+     B_value_1 = all_results[3][first_nbi_index]
+     B_value_2 = all_results[3][second_nbi_index]
+     B_max_array_1 = all_results[8][first_nbi_index]
+     B_max_array_2 = all_results[8][second_nbi_index]
+     s_1_array = all_results[7][first_nbi_index]
+     s_2_array = all_results[7][second_nbi_index]
+     J_0_array_1 = np.array(all_results[9][first_nbi_index])  
+     J_0_array_2 = np.array(all_results[9][second_nbi_index])  
+    
+     for i in range(len(array_1)):
+        for j in range(len(array_2)):
+
+            B_max_i = B_max_array_1[i]
+            B_max_j = B_max_array_2[j]
+            s_1_i = s_1_array[i]
+            s_2_j = s_2_array[j]
+
+            mask_i = (ratio > B_max_i)
+            mask_j = (ratio > B_max_j)
+
+            mask_i_val = (ratio> B_value_1[i])
+            mask_j_val = (ratio> B_value_2[j])
+            
+            #free particles 
+            both_above_B_mask = mask_i & mask_j
+
+            #not free
+            both_below_B_mask = np.logical_not(mask_i) & np.logical_not(mask_j) & mask_i_val & mask_j_val
+
+            #or or 
+            cross_check_mask = (mask_i & np.logical_not(mask_j)) | (np.logical_not(mask_i) & mask_j)
+
+
+            
+            
+            
+            
+            #==================================NOT free=================================================
+            def relative_difference(a, b):
+                numerator = np.abs(a - b)
+            
+                denominator = np.maximum(np.maximum(np.abs(a), np.abs(b)), 1e-13)
+                return numerator / denominator
+            nan_mask = np.logical_or(np.isnan(J_0_array_1[i]), np.isnan(J_0_array_2[j])) 
+            equal_mask_J_0 = np.where(nan_mask, True, relative_difference(J_0_array_1[i], J_0_array_2[j])<delta_J)
+            
+            
+            #==================================free=================================================
+            equal_mask_s = (np.abs(np.abs(s_1_i / s_2_j)-1) <=  delta_s)
+            
+
+            #==================================forbidden======================================
+            mask_no_accept =  np.logical_not(mask_i_val) | np.logical_not(mask_j_val) 
+
+            #free diff
+            mask_condition_1 = both_above_B_mask  & np.logical_not(equal_mask_s)
+            #free same
+            mask_condition_2 = both_above_B_mask & equal_mask_s
+            #or or 
+            mask_condition_4 = cross_check_mask
+            #not free same 
+            mask_condition_5 = both_below_B_mask & equal_mask_J_0
+            #not free diff 
+            mask_condition_6 = both_below_B_mask & np.logical_not(equal_mask_J_0)
+            #f
+            mask_condition_7 = mask_no_accept
+            
+            #results
+            product = array_1[i] * array_2[j]
+            #mask
+            product[mask_condition_1] = 0
+            product[mask_condition_4] = 0
+            product[mask_condition_6] = 0
+            product[mask_condition_7] = 0
+
+            sum_product = np.sum(product)
+            element = np.log10(np.where(sum_product > 0, sum_product, 1e-8))
+            MATRIX[i, j] = np.where(element>-8, element, -np.inf)
+
+     return MATRIX
+
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
