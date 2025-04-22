@@ -7,7 +7,7 @@ import Weight_Fuction.WF_FIDA as WF
 import subprocess
 import sys
 import platform
-
+from scipy.integrate import trapezoid
 
 def install(package):
     subprocess.check_call([sys.executable, "-m", "pip", "install", package])
@@ -343,6 +343,7 @@ class App(ctk.CTk):
             self.Name_NBI = data['NBI']
             self.conf = data['conf']
             self.data_wf = self.all_results[10][0]
+            print(np.array(self.all_results[10][0]).shape)
             new_names = self.port_name()
             self.textbox.insert("end", f"\n[{timestamp}]: Loaded Data:\nMatrix size: {self.scale}\nViewing Angle: {self.angle}\nConfiguration: {self.conf} \nPorts: {', '.join(new_names)} \n  ")
             #Diagnostics: {', '.join(self.diagnostics)}\n
@@ -577,12 +578,15 @@ class App(ctk.CTk):
                         delta_J_0_list,           
                         delta_s_list              
                         ))
-
+        max_value_array = []
+        min_value_array = []
         for i, j, MATRIX, min_value in results:
          Matr[i, j] = MATRIX
+         max_value_array.append(np.max(MATRIX))
+         min_value_array.append(min_value)
          color = np.append(color, min_value)
-        min_value = 0.0
-        max_value = 4.0
+        min_value = -1#np.min(np.array(min_value_array))
+        max_value = 3.5 #np.max(np.array(max_value_array))
     
         def plot_subplot(i, j, Matr, axs, min_value, max_value):
             One_Matr = Matr[i, j]
@@ -672,6 +676,7 @@ class Data:
         self.P_1, self.P_2, self.P_name = Cout.Ports()
         self.NBI_X, self.NBI_Y, self.NBI_Z, self.NBI_uvec_X, self.NBI_uvec_Y, self.NBI_uvec_Z = Cout.NBI()
         self.Bget = calculus()
+        self.resolution_WF = 700
 
 
 
@@ -761,8 +766,8 @@ class Data:
         result_for_j = []
 
         for j in range(len(data_B_c[3][i])):
-            x_ev = np.linspace(10, 100, 300)
-            y_ev = np.linspace(-100, 100, 300) / 2.5
+            x_ev = np.linspace(10, 100, self.resolution_WF)
+            y_ev = np.linspace(-100, 100, self.resolution_WF) / 2.5
 
             if index_nbi < 8:
                result = WF.weight_Function(data_B_c[4][i][j], data_B_c[3][i][j], x_ev, y_ev)
@@ -777,6 +782,7 @@ class Data:
 class calculus():
     def __init__(self):
          lll=0
+         self.resolution_WF = 700
 
     def gets(self, point1, point2, scale, config, B_0):
       point1, point2 = point1 / 100, point2 / 100
@@ -869,8 +875,8 @@ class calculus():
       B_max_point = eq.get_Bmax(s0)
       L = 300 
       N = 2000
-      E_values = np.linspace(10, 100, 300) * (1.6 * 10**(-19)) * 10**3  
-      mu_values = np.linspace(-100, 100, 300)/2.5 * (1.6 * 10**(-19)) * 10**3 
+      E_values = np.linspace(10, 100, self.resolution_WF) * (1.6 * 10**(-19)) * 10**3  
+      mu_values = np.linspace(-100, 100, self.resolution_WF)/2.5 * (1.6 * 10**(-19)) * 10**3 
 
       #Solve eq
       def solve_differential(point, L, N, rhs_B):
@@ -949,7 +955,7 @@ class calculus():
     def compute_matrix(self, args, all_results, delta_J, delta_s):
         i, j, port_i, port_j = args
         matrix = self.sum(port_i, port_j, i, j, all_results, delta_J, delta_s)
-        matrix = np.transpose(matrix)
+        #matrix = np.transpose(matrix)
         filtered = matrix[matrix != -np.inf]
         min_value = np.min(filtered) if filtered.size > 0 else 0
         return (i, j, matrix, min_value)
@@ -961,8 +967,8 @@ class calculus():
      MATRIX = np.zeros((len(array_1), len(array_2)))
 
      
-     x_ev = np.linspace(10, 100, 300)
-     y_ev = np.linspace(-100, 100, 300) / 2.5
+     x_ev = np.linspace(10, 100, self.resolution_WF)
+     y_ev = np.linspace(-100, 100, self.resolution_WF) / 2.5
      x_ev, y_ev = np.meshgrid(x_ev, y_ev)
 
      ratio = np.abs(x_ev / y_ev)
@@ -1042,7 +1048,10 @@ class calculus():
             product[mask_condition_6] = 0
             product[mask_condition_7] = 0
 
-            sum_product = np.sum(product)
+
+
+
+            sum_product = np.trapz(np.trapz(product, np.linspace(10, 100, self.resolution_WF), axis=1), np.linspace(-100, 100, self.resolution_WF) / 2.5)
             element = np.log10(np.where(sum_product > 0, sum_product, 1e-8))
             MATRIX[i, j] = np.where(element>-8, element, -np.inf)
 
