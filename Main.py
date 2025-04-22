@@ -65,7 +65,7 @@ class App(ctk.CTk):
         self.Name_NBI = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
         self.results_folder = "Results"  
         self.conf_folder =os.path.join(curr_directory, "config_files")
-        self.conf = os.path.join(self.conf_folder, "beta=0.txt")
+        self.conf = os.path.join(self.conf_folder, "EIM_beta=0.txt")
         self.diagnostics = ['FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA']
 
   
@@ -380,6 +380,9 @@ class App(ctk.CTk):
     
     def select_file_conf(self, file_name):
         self.conf =  os.path.join(self.conf_folder, file_name)
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        config_name = os.path.splitext(os.path.basename(self.conf))[0]
+        self.textbox.insert("end", f"\n[{timestamp}]:  Configuration is {config_name}\n")
         print(self.conf)
     
 
@@ -780,6 +783,7 @@ class calculus():
       points = np.linspace(point1, point2, scale)
 
       previous_directory = os.getcwd()
+      print(previous_directory)
       os.chdir('J_0_test')
 
 
