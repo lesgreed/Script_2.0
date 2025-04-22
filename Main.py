@@ -56,7 +56,7 @@ class App(ctk.CTk):
         self.angle = int(90)
         self.scale = 10  
         self.delta_s = 0.05
-        self.delta_J_0 = 0.01 
+        self.delta_J_0 = 0.005 
         self.current_graph = None
         self.all_results = []
         self.data_wf = []
@@ -64,7 +64,7 @@ class App(ctk.CTk):
         self.Name_NBI = ['NBI_7','NBI_7', 'NBI_7','NBI_8', 'NBI_8','NBI_8']
         self.results_folder = "Results"  
         self.conf_folder =os.path.join(curr_directory, "J_0_test")
-        self.conf = 'w7x-sc1_ecrh_beta=0.02.bc'
+        self.conf = 'beta=0.txt'
         self.diagnostics = ['FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA']
 
   
@@ -507,7 +507,7 @@ class App(ctk.CTk):
                  MATRIX= np.transpose(MATRIX)
                  filtered_values = MATRIX[MATRIX != -np.inf]
                  min_value = np.min(filtered_values) if filtered_values.size > 0 else -9
-                 min_value = 3.0
+                 min_value = 0
                  color = np.append(color, min_value)
                  Matr[i, j]  = MATRIX
         for i in range(num_arrays):
@@ -579,9 +579,10 @@ class App(ctk.CTk):
      s_2_array = self.all_results[7][second_nbi_index]
      J_0_array_1 = np.array(self.all_results[9][first_nbi_index])  
      J_0_array_2 = np.array(self.all_results[9][second_nbi_index])  
-
+    
      for i in range(len(array_1)):
         for j in range(len(array_2)):
+
             B_max_i = B_max_array_1[i]
             B_max_j = B_max_array_2[j]
             s_1_i = s_1_array[i]
@@ -593,12 +594,6 @@ class App(ctk.CTk):
             mask_i_val = (ratio> B_value_1[i])
             mask_j_val = (ratio> B_value_2[j])
             
-            x_idx = i % x_ev.shape[0]  
-            y_idx = j % y_ev.shape[1]  
-            
-            J_0_i = J_0_array_1[x_idx, y_idx]  
-            J_0_j = J_0_array_2[x_idx, y_idx]  
-
             #free particles 
             both_above_B_mask = mask_i & mask_j
 
@@ -608,35 +603,41 @@ class App(ctk.CTk):
             #or or 
             cross_check_mask = (mask_i & np.logical_not(mask_j)) | (np.logical_not(mask_i) & mask_j)
 
-            #==================================free=================================================
-            ratio_mask_s = (np.abs(np.abs(s_1_i / s_2_j)-1) <=  self.delta_s)
-            equal_s_mask = ratio_mask_s 
+
+            
+            
+            
+            
             #==================================NOT free=================================================
             def relative_difference(a, b):
                 numerator = np.abs(a - b)
-
-                denominator = np.maximum(np.maximum(np.abs(a), np.abs(b)), 1e-12)
+            
+                denominator = np.maximum(np.maximum(np.abs(a), np.abs(b)), 1e-13)
                 return numerator / denominator
+            nan_mask = np.logical_or(np.isnan(J_0_array_1[i]), np.isnan(J_0_array_2[j])) 
+            equal_mask_J_0 = np.where(nan_mask, True, relative_difference(J_0_array_1[i], J_0_array_2[j])<self.delta_J_0)
+            
+            
+            #==================================free=================================================
+            equal_mask_s = (np.abs(np.abs(s_1_i / s_2_j)-1) <=  self.delta_s)
+            
 
-
-            J_0_check_mask = relative_difference(J_0_i, J_0_j) < self.delta_J_0
             #==================================forbidden======================================
             mask_no_accept =  np.logical_not(mask_i_val) | np.logical_not(mask_j_val) 
 
             #free diff
-            mask_condition_1 = both_above_B_mask  & np.logical_not(equal_s_mask)
+            mask_condition_1 = both_above_B_mask  & np.logical_not(equal_mask_s)
             #free same
-            mask_condition_2 = both_above_B_mask & equal_s_mask
+            mask_condition_2 = both_above_B_mask & equal_mask_s
             #or or 
             mask_condition_4 = cross_check_mask
             #not free same 
-            mask_condition_5 = both_below_B_mask & J_0_check_mask
+            mask_condition_5 = both_below_B_mask & equal_mask_J_0
             #not free diff 
-            mask_condition_6 = both_below_B_mask & np.logical_not(J_0_check_mask)
+            mask_condition_6 = both_below_B_mask & np.logical_not(equal_mask_J_0)
             #f
             mask_condition_7 = mask_no_accept
-            #  
-            mask_condition_8 = (s_1_i > 1) | (s_2_j > 1)
+            
             #results
             product = array_1[i] * array_2[j]
             #mask
@@ -644,7 +645,6 @@ class App(ctk.CTk):
             product[mask_condition_4] = 0
             product[mask_condition_6] = 0
             product[mask_condition_7] = 0
-            product[mask_condition_8] = 0
 
             sum_product = np.sum(product)
             element = np.log10(np.where(sum_product > 0, sum_product, 1e-8))
@@ -792,7 +792,7 @@ class calculus():
       os.chdir('J_0_test')
 
 
-      mconf_config = {'B0': 2.911,
+      mconf_config = {'B0': 2.520,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, 
                 'truncation': 1e-10} 
@@ -806,7 +806,6 @@ class calculus():
       start_indices, end_indices = self.find_transitions(S_array)
       start_point = points[start_indices[0]].reshape(3,)
       end_point = points[end_indices[0]].reshape(3,)
-
 
       points = np.linspace(start_point, end_point, scale)
 
@@ -860,7 +859,7 @@ class calculus():
       point = np.array(point, dtype=np.float64)
 
       #config
-      mconf_config = {'B0': 2.911,
+      mconf_config = {'B0': 2.520,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-10} #trancation of mn harmonics
@@ -906,7 +905,7 @@ class calculus():
               B_max_particle = np.abs(E / mu)
               
               
-              if B_max_particle<B_max_point and B_max_particle>B_value and s0<1:
+              if B_max_particle<=B_max_point and B_max_particle>B_value and s0<=1:
                
                #-------------------Integral----------------------------
                def compute_integrals(magB, path, mu, B_max_particle):
@@ -937,7 +936,7 @@ class calculus():
                
                J_0_map[i, j] = self.trapezoidal_integral(complete_integrand, complete_path)*1e7
               else:
-               J_0_map[i, j] = 0.0     
+               J_0_map[i, j] = np.nan
 
       return J_0_map
     

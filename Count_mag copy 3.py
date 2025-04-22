@@ -116,22 +116,22 @@ if __name__ == "__main__":
 
     os.chdir('J_0_test')
     mconf_config = {
-            'B0': 2.520,
+            'B0': 2.911,
             'B0_angle': 0.0,
             'accuracy': 1e-10, 
             'truncation': 1e-10
         }
-    eq = mconf.Mconf_equilibrium("w7x-sc1_ecrh_beta=0.02.bc", mconf_config=mconf_config)
+    eq = mconf.Mconf_equilibrium("KJM_beta=2.txt", mconf_config=mconf_config)
     
     s0, vecB = eq.get_B(point)
-    B_ref = 2.48969838045484
-    
+    B_ref = 2.614991383973272689
+    #B_ref = 3.020730126486585
     fig = plt.figure(figsize=(5,6))
     ax1 = fig.add_subplot(111)
     phi = np.linspace(0,2*np.pi,20)
     T = np.linspace(0,2*np.pi,40)
     Ts,Ps = np.meshgrid(phi,T)
-    X,Y,Z = eq.mag2xyz(0.8,Ts,Ps)
+    X,Y,Z = eq.mag2xyz(0.5,Ts,Ps)
     s, B_lab  = eq.get_s_B(X,Y,Z)
     modB      = np.linalg.norm(B_lab,axis=2)
     ax1.contour(T, phi, modB.T, levels=[B_ref])

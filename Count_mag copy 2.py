@@ -18,7 +18,7 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
 
     # Центр круга
     center_R = np.mean(R_inside)-25
-    center_Z = np.mean(Z_inside)-10
+    center_Z = np.mean(Z_inside)
     print(center_R, Phi, center_Z)
     print("hi", inverse_transform(center_R, center_Z, Phi))
     center = np.array([center_R, center_Z])
@@ -38,26 +38,28 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
     Z_circle = Z_flat[inside_mask]
 
     # === ПЛОТ ===
-    fig, axes = plt.subplots(1, 2, figsize=(30, 5), sharex=False, sharey=False)
+    fig, axes = plt.subplots(1, 1, figsize=(30, 5), sharex=False, sharey=False)
 
     # Контуры
-    contour1 = axes[0].contour(grid_R, grid_Z, B_grid_1, levels=20, cmap="plasma")
+    contour1 = axes[0].contourf(grid_R, grid_Z, B_grid_1, levels=20, cmap="plasma")
     axes[0].plot(R_phi, Z_phi, color="red", linewidth=0.5)
     axes[0].set_title('beta=1.txt')
+    fig.colorbar(contour1, ax=axes[0])
 
-    contour3 = axes[1].contour(grid_R, grid_Z, B_grid_2, levels=20, cmap="plasma")
-    axes[1].plot(R_phi, Z_phi, color="red", linewidth=0.5)
-    axes[1].set_title('beta=0.65.txt')
+    #contour3 = axes[1].contourf(grid_R, grid_Z, B_grid_2, levels=20, cmap="plasma")
+    #axes[1].plot(R_phi, Z_phi, color="red", linewidth=0.5)
+    #axes[1].set_title('beta=0.65.txt')
 
     # Круг на графиках 0 и 2
-    for ax in [axes[0], axes[1]]:
-        circle = Circle((center_R, center_Z), radius, color='blue', fill=False, linestyle='--', linewidth=1.5)
-        ax.add_patch(circle)
+    #for ax in [axes[0], axes[1]]:
+    #    circle = Circle((center_R, center_Z), radius, color='blue', fill=False, linestyle='--', linewidth=1.5)
+    #    ax.add_patch(circle)
+    plt.show()
 
 
     # Цветовые шкалы
     fig.subplots_adjust(right=0.80)
-    fig.colorbar(contour1, ax=axes[0])
+
     return R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask
     
 
@@ -316,7 +318,8 @@ if __name__ == "__main__":
     #J_0_grid_2[mask] = res_2
 
 
-    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=500, circle_radius=1 )
+
+    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=500, circle_radius=7 )
 
 
     X_circ, Y_circ, Z_circ = [], [], []
