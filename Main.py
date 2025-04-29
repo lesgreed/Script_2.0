@@ -68,6 +68,7 @@ class App(ctk.CTk):
         self.conf = os.path.join(self.conf_folder, "EIM_beta=0.txt")
         self.diagnostics = ['FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA']
 
+
   
 
         # Section 1: Sidebar
@@ -102,12 +103,16 @@ class App(ctk.CTk):
         self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="W7-X cheking", font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
+
+        
+
         
         self.appearance_mode_label = ctk.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 0))
+
         self.scaling_label = ctk.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
         self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
         self.scaling_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
@@ -115,9 +120,9 @@ class App(ctk.CTk):
         self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
 
         self.show_old_button_label= ctk.CTkLabel(self.sidebar_frame, text="Raw data:", anchor="w")    
-        self.show_old_button_label.grid(row=4, column=0, padx=10, pady=(10,0))   
+        self.show_old_button_label.grid(row=4, column=0, padx=20, pady=(10,0))   
         self.show_old_button = ctk.CTkButton(self.sidebar_frame, text="Update data", command=lambda: self.pre_calculate())
-        self.show_old_button.grid(row=4, column=0, padx=10, pady=(70,0))
+        self.show_old_button.grid(row=4, column=0, padx=20, pady=(70,0))
 
     def create_additional_widgets(self):
         # create textbox
@@ -175,6 +180,16 @@ class App(ctk.CTk):
         self.port_optionmenu_label.grid(row=2, column=0, padx=20, pady=(10, 0), sticky="w")
         self.port_optionmenu = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.port_options)
         self.port_optionmenu.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="w")
+
+        #Type of diagnostic for new port 
+
+
+        self.diagnoctic_type_label = ctk.CTkLabel(self.tabview.tab("Tools"), text="Diagnostic type:", anchor="w")
+        self.diagnoctic_type_label.grid(row=4, column=0, padx=20, pady=(10, 0),sticky="w")
+        self.diagnoctic_type_optionmenu = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=["FIDA", "CTS"])
+        self.diagnoctic_type_optionmenu.grid(row=5, column=0, padx=20, pady=(0, 20),sticky="w")
+
+
 
         # Section 2: "Setting"
         self.tabview.add("Setting")
@@ -247,28 +262,28 @@ class App(ctk.CTk):
         self.second_value_label = ctk.CTkLabel(self.tabview.tab("Setting"), text=str(self.scale))
         self.second_value_label.grid(row=3, column=1, padx=(10, 20), pady=(10, 20), sticky="w")
         
-        self.file_list_label = ctk.CTkLabel(self.tabview.tab("Tools"), text="Configuration", anchor="w")
-        self.file_list_label.grid(row=4, column=0, padx=20, pady=(10, 0), sticky="w")
+        self.file_list_conf_label = ctk.CTkLabel(self.tabview.tab("Tools"), text="Configuration", anchor="w")
+        self.file_list_conf_label.grid(row=6, column=0, padx=20, pady=(10, 0), sticky="w")
         
-        self.file_list = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.get_result_files_conf(), command=self.select_file_conf)
-        self.file_list.grid(row=5, column=0, padx=20, pady=(0, 20), sticky="w")
+        self.file_list_conf = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.get_result_files_conf(), command=self.select_file_conf)
+        self.file_list_conf.grid(row=7, column=0, padx=20, pady=(0, 20), sticky="w")
 
         self.load_button_config = ctk.CTkButton(self.tabview.tab("Tools"), text="Load Configuration", command=self.load_config)
-        self.load_button_config.grid(row=6, column=0, padx=20, pady=5, sticky="w")
+        self.load_button_config.grid(row=8, column=0, padx=20, pady=5, sticky="w")
 
 
         self.file_list_label = ctk.CTkLabel(self.tabview.tab("Tools"), text="Results", anchor="w")
-        self.file_list_label.grid(row=7, column=0, padx=20, pady=(10, 0), sticky="w")
+        self.file_list_label.grid(row=9, column=0, padx=20, pady=(10, 0), sticky="w")
         
         self.file_list = ctk.CTkOptionMenu(self.tabview.tab("Tools"), values=self.get_result_files(), command=self.select_file)
-        self.file_list.grid(row=8, column=0, padx=20, pady=(0, 20), sticky="w")
+        self.file_list.grid(row=10, column=0, padx=20, pady=(0, 20), sticky="w")
 
 
         self.save_button = ctk.CTkButton(self.tabview.tab("Tools"), text="Save data", command=self.save_results)
-        self.save_button.grid(row=9, column=0, padx=20, pady=5, sticky="w")
+        self.save_button.grid(row=11, column=0, padx=20, pady=5, sticky="w")
         
         self.load_button = ctk.CTkButton(self.tabview.tab("Tools"), text="Load data", command=self.load_results)
-        self.load_button.grid(row=10, column=0, padx=20, pady=5, sticky="w")
+        self.load_button.grid(row=12, column=0, padx=20, pady=5, sticky="w")
 
         # Canvas for displaying the graph
 
@@ -291,7 +306,7 @@ class App(ctk.CTk):
 
     #-------------------------------------------------------------Save data-------------------------------------------------------------------    
     def save_results(self):
-        timestamp = datetime.now().strftime("%H%M%S")
+        timestamp = datetime.now().strftime("%H:%M:%S")
 
 
             
@@ -308,12 +323,13 @@ class App(ctk.CTk):
             'results': self.all_results,
             'Ports': self.Name_Ports,
             'NBI':self.Name_NBI,
-            'conf': self.conf
+            'conf': self.conf,
+            'B0': self.B_0_set
         }
             with open(file_path, 'w') as f:
                 f.write(jsonpickle.dumps(data_to_save))
 
-            self.textbox.insert("end", f"[{timestamp}]: File was saved: {file_path}\n")
+            self.textbox.insert("end", f"\n[{timestamp}]: File was saved: \n{file_name}\n")
             self.file_list.configure(values=self.get_result_files())  
         except Exception as e:
             self.textbox.insert("end", f"[{timestamp}]: Error during saving file: {e}\n")
@@ -336,17 +352,40 @@ class App(ctk.CTk):
                 #content = f.read()
                 #print(len(content))
                 data = jsonpickle.loads(f.read())
-            self.scale = data['scale']
+
+            #Scale and Angle update
             self.angle = data['angle']
+            self.scale = data['scale']
+            self.slider.set(self.angle)
+            self.second_slider.set(self.scale // 10)
+            self.value_label.configure(text=str(self.angle))
+            self.second_value_label.configure(text=str(self.scale))
+
+
+            #Data 
             self.all_results = data['results']
             self.Name_Ports = data['Ports']
             self.Name_NBI = data['NBI']
             self.conf = data['conf']
+            
+
+            #New B0 in App
+            self.B_0_set = data['B0']
+            self.B_0_entry.delete(0, "end")
+            self.B_0_entry.insert(0, f"{self.B_0_set}")
+
+            #Data of weight functions
             self.data_wf = self.all_results[10][0]
             print(np.array(self.all_results[10][0]).shape)
+
+            #Names of ports 
             new_names = self.port_name()
-            self.textbox.insert("end", f"\n[{timestamp}]: Loaded Data:\nMatrix size: {self.scale}\nViewing Angle: {self.angle}\nConfiguration: {self.conf} \nPorts: {', '.join(new_names)} \n  ")
-            #Diagnostics: {', '.join(self.diagnostics)}\n
+            #Configuration 
+            config_name = os.path.splitext(os.path.basename(self.conf))[0]
+            self.file_list_conf.set(os.path.basename(self.conf))
+
+
+            self.textbox.insert("end", f"\n[{timestamp}]: Loaded Data:\nMatrix size: {self.scale}\nViewing Angle: {self.angle}\nB0: {self.B_0_set}\nConfiguration: {config_name} \nPorts: {', '.join(new_names)} \n  ")
         except Exception as e:
             self.textbox.insert("end", f"\n[{timestamp}]: Error during loading file: {e}\n")
             
@@ -387,7 +426,6 @@ class App(ctk.CTk):
         print(self.conf)
     
 
-
     def load_config(self):
         file_path = filedialog.askopenfilename(
             initialdir=self.conf_folder,
@@ -410,15 +448,16 @@ class App(ctk.CTk):
      
     #-----------------------------------------------Pre_calculate------------------------------------------------------------------------------
     def pre_calculate(self):
-        if len(self.all_results) ==0:
-         Result_array = self.data_instance.data_already_input(self.scale,  self.Name_Ports,   self.Name_NBI, self.angle, self.conf, self.B_0_set)
-         self.all_results = Result_array
-         self.data_wf = self.all_results[10][0]
-        else:
-            self.all_results = [row[:6] for row in self.all_results]
+        self.diagnostics = ['FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA', 'FIDA']
+        Result_array = self.data_instance.data_already_input(self.scale,  self.Name_Ports,   self.Name_NBI, self.angle, self.conf, self.B_0_set, self.diagnostics)
+        self.all_results = Result_array
+        self.data_wf = self.all_results[10][0]
+
+
 
         time = datetime.now().strftime("%H:%M:%S")
-        self.textbox.insert("end", f"\n [{time}]: Old data ready \n\n ")
+        config_name = os.path.splitext(os.path.basename(self.conf))[0]
+        self.textbox.insert("end", f"\n[{time}]: Loaded preData:\nMatrix size: {self.scale}\nViewing Angle: {self.angle}\nConfiguration: {config_name} \nB0: {self.B_0_set} \n  ")
     #---------------------------------------------------------------------------------------------------------------------------------------------
         
     
@@ -472,7 +511,7 @@ class App(ctk.CTk):
     #------------------------------------------------------------Tools function----------------------------------------------------------------------------
     def generate_port_options(self, selected_nbi: str):
         nbi_index = int(selected_nbi.split("_")[1])
-        if selected_nbi.startswith("CTS"):
+        if selected_nbi.startswith("Gyrotron"):
          nbi_index = nbi_index+8
         nbi_index = nbi_index-1
         valid_indices, extreme_points_1, extreme_points_2, valid_port_names = self.data_instance.port_for_nbi(nbi_index, int(self.angle), self.scale)
@@ -486,7 +525,7 @@ class App(ctk.CTk):
             self.port_optionmenu.set(self.port_options[0])
 
     def generate_nbi_options(self):
-      return [f"NBI_{i}" if i <= 8 else f"CTS_{i-8}" for i in range(1, 12)]
+      return [f"NBI_{i}" if i <= 8 else f"Gyrotron_{i-8}" for i in range(1, 12)]
     #-----------------------------------------------------------------------------------------------------------------------------------------------------
  
 
@@ -506,14 +545,14 @@ class App(ctk.CTk):
 
 
     #---------------------------------------Add new matrxi to grid ----------------------------------------------------
-    def create_result_array_for_port(self, selected_nbi, selected_port):
+    def create_result_array_for_port(self, selected_nbi, selected_port, diagnostic_type):
         data = self.data_instance.data_nbi_ports(selected_nbi, selected_port, self.angle, self.scale, self.conf, self.B_0_set)
 
         for i in range(len(data)):
             self.all_results[i].append(data[i])
 
-        reuslt = self.data_instance.process_data_for_point(len(self.all_results[0])-1, self.all_results)
-        self.data_wf.append(reuslt)
+        result = self.data_instance.process_data_for_point(len(self.all_results[0])-1, self.all_results,diagnostic_type)
+        self.data_wf.append(result)
     #------------------------------------------------------------------------------------------------------------------
 
 
@@ -532,6 +571,8 @@ class App(ctk.CTk):
         #User 
         selected_nbi = self.nbi_optionmenu.get()
         selected_port = self.port_optionmenu.get()
+        self.new_port_diagnostic = self.diagnoctic_type_optionmenu.get()
+        self.diagnostics.append(self.new_port_diagnostic )
         
         #Time
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -543,7 +584,7 @@ class App(ctk.CTk):
         #Data
         self.Name_NBI.append(selected_nbi)
         self.Name_Ports.append(selected_port)
-        self.create_result_array_for_port(selected_nbi, selected_port)
+        self.create_result_array_for_port(selected_nbi, selected_port,  self.new_port_diagnostic)
 
         self.generate_and_show_graph()
 
@@ -676,7 +717,7 @@ class Data:
         self.P_1, self.P_2, self.P_name = Cout.Ports()
         self.NBI_X, self.NBI_Y, self.NBI_Z, self.NBI_uvec_X, self.NBI_uvec_Y, self.NBI_uvec_Z = Cout.NBI()
         self.Bget = calculus()
-        self.resolution_WF = 700
+        self.resolution_WF = 300
 
 
 
@@ -705,7 +746,7 @@ class Data:
         return valid_indices, extreme_points_1, extreme_points_2, valid_port_names
     
 
-    def data_already_input(self, scale, Name_Ports, Name_NBI, angle, config, B_0):
+    def data_already_input(self, scale, Name_Ports, Name_NBI, angle, config, B_0, diagnostic_types):
 
         data_B = [[] for _ in range(11)]
         for i in range(len(Name_Ports)):
@@ -715,7 +756,7 @@ class Data:
                data_B[i].append(data_i[i])
            print(data_B[0])
 
-        WF_array = self.create_result_array_for_port_old(data_B)
+        WF_array = self.create_result_array_for_port_old(data_B, diagnostic_types)
         data_B[10].append(WF_array)
 
         return data_B
@@ -728,7 +769,7 @@ class Data:
         P_2_end = [self.new_P_1[0][index], self.new_P_1[1][index], self.new_P_1[2][index]]
         
         index_NBI = int(nbi.split('_')[-1])-1
-        if nbi.startswith("CTS"):
+        if nbi.startswith("Gyrotron"):
             index_NBI += 8
 
         valid_indices, extreme_points_1, extreme_points_2, *_ = geo.NBI_and_PORTS(
@@ -748,11 +789,11 @@ class Data:
         return [nbi, port, points, B_array, angles, B_vec_array, angles_vec_B,S_array, B_max_array, J_0_array] 
 
 
-    def create_result_array_for_port_old(self, data_B_c):
+    def create_result_array_for_port_old(self, data_B_c, diagnostic_types):
         WF_array = []
 
         with ThreadPoolExecutor() as executor:
-            results = list(tqdm(executor.map(self.process_data_for_point, range(len(data_B_c[1])), [data_B_c] * len(data_B_c[0]))))
+            results = list(tqdm(executor.map(self.process_data_for_point, range(len(data_B_c[1])), [data_B_c] * len(data_B_c[0]), diagnostic_types)))
 
         for result_for_i in results:
             WF_array.append(result_for_i)
@@ -760,7 +801,7 @@ class Data:
     
         return results
 
-    def process_data_for_point(self,i, data_B_c):
+    def process_data_for_point(self,i, data_B_c, diagnostic_type):
 
         index_nbi = int(data_B_c[0][i].split('_')[-1]) - 1
         result_for_j = []
@@ -769,9 +810,9 @@ class Data:
             x_ev = np.linspace(10, 100, self.resolution_WF)
             y_ev = np.linspace(-100, 100, self.resolution_WF) / 2.5
 
-            if index_nbi < 8:
+            if diagnostic_type == 'FIDA':
                result = WF.weight_Function(data_B_c[4][i][j], data_B_c[3][i][j], x_ev, y_ev)
-            else:
+            if diagnostic_type == 'CTS':
                 result = WF.CTS_wf(data_B_c[6][i][j], data_B_c[3][i][j], x_ev, y_ev)
             result_for_j.append(result) 
         return result_for_j
@@ -782,7 +823,7 @@ class Data:
 class calculus():
     def __init__(self):
          lll=0
-         self.resolution_WF = 700
+         self.resolution_WF = 300
 
     def gets(self, point1, point2, scale, config, B_0):
       point1, point2 = point1 / 100, point2 / 100
@@ -806,6 +847,8 @@ class calculus():
          S_array.append(S)
       start_indices, end_indices = self.find_transitions(S_array)
       start_point = points[start_indices[0]].reshape(3,)
+      print(start_indices)
+      print(end_indices)
       end_point = points[end_indices[0]].reshape(3,)
 
       points = np.linspace(start_point, end_point, scale)
@@ -834,6 +877,11 @@ class calculus():
                 start_indices.append(i+1)
             elif arr[i] < 1 and arr[i+1] >= 1: 
                 end_indices.append(i+1)
+        if not start_indices:
+                start_indices.append(0)
+        if not end_indices:
+                end_indices.append(len(arr) - 1)
+
     
         return start_indices, end_indices
 
