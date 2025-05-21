@@ -17,10 +17,8 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
     from matplotlib.patches import Circle
 
     # Центр круга
-    center_R = np.mean(R_inside)-25
-    center_Z = np.mean(Z_inside)
-    print(center_R, Phi, center_Z)
-    print("hi", inverse_transform(center_R, center_Z, Phi))
+    center_R = np.mean(R_inside)+25
+    center_Z = np.mean(Z_inside)+10
     center = np.array([center_R, center_Z])
     radius = circle_radius
 
@@ -38,28 +36,26 @@ def plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_
     Z_circle = Z_flat[inside_mask]
 
     # === ПЛОТ ===
-    fig, axes = plt.subplots(1, 1, figsize=(30, 5), sharex=False, sharey=False)
+    fig, axes = plt.subplots(1, 2, figsize=(30, 5), sharex=False, sharey=False)
 
     # Контуры
-    contour1 = axes[0].contourf(grid_R, grid_Z, B_grid_1, levels=20, cmap="plasma")
+    contour1 = axes[0].contour(grid_R, grid_Z, B_grid_1, levels=20, cmap="plasma")
     axes[0].plot(R_phi, Z_phi, color="red", linewidth=0.5)
-    axes[0].set_title('beta=1.txt')
-    fig.colorbar(contour1, ax=axes[0])
+    axes[0].set_title('w7x-sc1.bc')
 
-    #contour3 = axes[1].contourf(grid_R, grid_Z, B_grid_2, levels=20, cmap="plasma")
-    #axes[1].plot(R_phi, Z_phi, color="red", linewidth=0.5)
-    #axes[1].set_title('beta=0.65.txt')
+    contour3 = axes[1].contour(grid_R, grid_Z, B_grid_2, levels=20, cmap="plasma")
+    axes[1].plot(R_phi, Z_phi, color="red", linewidth=0.5)
+    axes[1].set_title('w7x-sc1_ecrh_beta=0.04.bc')
 
     # Круг на графиках 0 и 2
-    #for ax in [axes[0], axes[1]]:
-    #    circle = Circle((center_R, center_Z), radius, color='blue', fill=False, linestyle='--', linewidth=1.5)
-    #    ax.add_patch(circle)
-    plt.show()
+    for ax in [axes[0], axes[1]]:
+        circle = Circle((center_R, center_Z), radius, color='blue', fill=False, linestyle='--', linewidth=1.5)
+        ax.add_patch(circle)
 
 
     # Цветовые шкалы
     fig.subplots_adjust(right=0.80)
-
+    fig.colorbar(contour1, ax=axes[0])
     return R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask
     
 
@@ -129,7 +125,7 @@ def calculate_J_0_for_point(point, config, B):
       point = np.array(point, dtype=np.float64)
 
       #config
-      mconf_config = {'B0': 2.911,
+      mconf_config = {'B0': 2.525,
                 'B0_angle': 0.0,
                 'accuracy': 1e-10, #accuracy of magnetic to cartesian coordinat transformation
                 'truncation': 1e-10} #trancation of mn harmonics
@@ -207,7 +203,7 @@ def MagField(points, t):
     try:
         os.chdir('J_0_test')
         mconf_config = {
-            'B0': 2.911,
+            'B0': 2.525,
             'B0_angle': 0.0,
             'accuracy': 1e-10, 
             'truncation': 1e-10
@@ -281,8 +277,8 @@ if __name__ == "__main__":
     points_inside = np.vstack((X_inside, Y_inside, Z_inside_3D)).T
 
 
-    b0 = 'beta=1.txt'
-    b4 = 'beta=0.65.txt'
+    b0 = 'w7x-sc1.bc'
+    b4 = 'w7x-sc1_ecrh_beta=0.04.bc'
     B_array_1, B_vec_array, S_array, B_max_array_1 = MagField(points_inside/100, b0)
     B_array_2, B_vec_array, S_array, B_max_array_2 = MagField(points_inside/100, b4)
     
@@ -295,7 +291,7 @@ if __name__ == "__main__":
     print(np.nanmin(B_max_array_2))
 
 
-    B = 2.90
+    B = (np.nanmax(B_array_1) + np.nanmin(B_max_array_1)) / 2
     print(B)
 
 
@@ -318,8 +314,7 @@ if __name__ == "__main__":
     #J_0_grid_2[mask] = res_2
 
 
-
-    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=500, circle_radius=7 )
+    R_circle, Z_circle, R_grid_local, Z_grid_local, inside_mask = plot_zoomed_circle_view(grid_R, grid_Z, B_grid_1, B_grid_2, R_phi, Z_phi, R_inside, Z_inside, num_points=200, circle_radius=1 )
 
 
     X_circ, Y_circ, Z_circ = [], [], []
@@ -358,37 +353,21 @@ if __name__ == "__main__":
     # === 4. Гистограмма различий ===
     import matplotlib.pyplot as plt
 
-    fig, axs = plt.subplots(2, 2, figsize=(12, 5))  # 1 строка, 2 столбца
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5))  # 1 строка, 2 столбца
 
     # Первая гистограмма
-    axs[0,0].hist(res_1, bins=30, alpha=0.6, color='blue')
-    axs[0,0].set_title('Config 1: beta=1.txt')
-    axs[0,0].set_xlabel('J_0')  # можешь заменить на нужное название
-    axs[0,0].set_ylabel('Y')  # и это тоже
-    axs[0,0].grid(True)
+    axs[0].hist(res_1, bins=30, alpha=0.6, color='blue')
+    axs[0].set_title('Config 1: w7x-sc1.bc')
+    axs[0].set_xlabel('J_0')  # можешь заменить на нужное название
+    axs[0].set_ylabel('Y')  # и это тоже
+    axs[0].grid(True)
 
     # Вторая гистограмма
-    axs[0,1].hist(res_2, bins=40, alpha=0.6, color='orange')  # предполагаем, что у тебя есть res_2
-    axs[0,1].set_title('Config 2: beta=0.65.txt')
-    axs[0,1].set_xlabel('J_0')
-    axs[0,1].set_ylabel('Y')
-    axs[0,1].grid(True)
-    
-        # Первая гистограмма
-    axs[1,0].hist(min_diff_1, bins=30, alpha=0.6, color='blue')
-    axs[1,0].set_title('Config 1: beta=1.txt')
-    axs[1,0].set_xlabel('J_0 %')  # можешь заменить на нужное название
-    axs[1,0].set_ylabel('Y')  # и это тоже
-    axs[1,0].grid(True)
-
-    # Вторая гистограмма
-    axs[1,1].hist(min_diff_2, bins=40, alpha=0.6, color='orange')  # предполагаем, что у тебя есть res_2
-    axs[1,1].set_title('Config 2: beta=0.65.txt')
-    axs[1,1].set_xlabel('J_0 %')
-    axs[1,0].set_ylabel('Y')
-    axs[1,1].grid(True)
-    
-    
+    axs[1].hist(res_2, bins=40, alpha=0.6, color='orange')  # предполагаем, что у тебя есть res_2
+    axs[1].set_title('Config 2: w7x-sc1_ecrh_beta=0.04.bc')
+    axs[1].set_xlabel('J_0')
+    axs[1].set_ylabel('Y')
+    axs[1].grid(True)
 
     plt.tight_layout()
     plt.show()
