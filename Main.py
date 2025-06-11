@@ -665,10 +665,12 @@ class App(ctk.CTk):
             selected_port = self.Name_Ports[i]
             if selected_nbi[0] == 'N':
                name = 'S'
+               index_NBI_Gyr = selected_nbi[4]
             else:
                name = 'C'
-            axs[num_arrays-1, i].set_xlabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
-            axs[i, 0].set_ylabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{selected_nbi[4]}', fontsize=fonts)
+               index_NBI_Gyr = selected_nbi[9]
+            axs[num_arrays-1, i].set_xlabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{index_NBI_Gyr}', fontsize=fonts)
+            axs[i, 0].set_ylabel(f'{selected_port[0]}{selected_port[2]}{selected_port[4:]}.{name}{index_NBI_Gyr}', fontsize=fonts)
     
         config_name = os.path.splitext(os.path.basename(self.conf))[0]
         now = datetime.now()
