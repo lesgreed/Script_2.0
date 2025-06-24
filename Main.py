@@ -3,7 +3,7 @@ import Surface_rays as geo
 import Surface_data as FuD
 import NBI_Ports_data_input as Cout
 import J_0_test.mconf.mconf as mconf
-import Weight_Fuction.WF_FIDA as WF
+import Weight_Fuction.WF_FIDA_CTS as WF
 import subprocess
 import sys
 import platform
